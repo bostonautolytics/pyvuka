@@ -602,7 +602,7 @@ def saveparams(result):
         fitparams.update(data.matrix.buffer(i).fit.function_index.get())
         data.matrix.buffer(i).fit.parameter_error.set([0] * len(data.matrix.buffer(i).fit.parameter.get()))
 
-        for j in range(len(fitparams.paramid[0])):
+        for j in range(len(fitparams.paramid)):
             param = result.params[fitparams.paramid[j] + f"_{j+1}_{i}"].value
             error = result.params[fitparams.paramid[j] + f"_{j+1}_{i}"].stderr
             temp = data.matrix.buffer(i).fit.parameter.get()

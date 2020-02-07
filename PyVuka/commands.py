@@ -1,6 +1,6 @@
 import sys
 import os.path
-from PyVuka import data_obj as data, plot, fitfxns, fileio, numericalmethods, inputprocessing
+from PyVuka import data_obj as data, plot, fitfxns, fileio, Modules, commands, numericalmethods, inputprocessing
 import math
 import numpy as np
 import copy

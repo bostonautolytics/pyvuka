@@ -20,7 +20,6 @@ __email__ = "Paul@BostonAutoLytics.com"
 __status__ = "Development"
 
 
-
 def homescreen():
     print("\n\n  ____        __     __       _     ")
     print(r" |  _ \  _   _\ \   / /_   _ | | __ __ _ ")

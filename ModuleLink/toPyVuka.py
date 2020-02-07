@@ -210,9 +210,9 @@ def save_plot(list_of_datamatrix_idicies, output_image_file_path, *args, **kwarg
 def run_pyvuka_command(native_pyvuka_command):
     if not isinstance(native_pyvuka_command, str):
         raise ValueError(f'PyVuka command is not a valid string object!')
-    #try:
-    commander = commands.Command()
-    return commander(native_pyvuka_command)
-    #except Exception as e:
-    #    raise ValueError(f'Invalid PyVuka command!\n\t{str(e)}')
+    try:
+        commander = commands.Command()
+        return commander(native_pyvuka_command)
+    except Exception as e:
+        raise ValueError(f'Invalid PyVuka command!\n\t{str(e)}')
 
