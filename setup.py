@@ -4,8 +4,8 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="PyVuka", # Replace with your own username
-    version="0.1.8",
+    name="PyVuka",
+    version="0.1.11",
     author="R Paul Nobrega",
     author_email="Paul@PaulNobrega.net",
     description="General Purpose Global Data Analysis Package",

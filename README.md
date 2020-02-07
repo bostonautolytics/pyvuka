@@ -2,9 +2,11 @@
 
 PyVuka is a command line based and scriptable data fitting program.  This software can be used for global and unlinked fitting of custom data models, data transforms, plotting, reading, and writing files.  Custom python-native modules can also be written and will be automatically imported upon deposition in the Modules directory.
 
+This project has been supported by the Institute of Protein Innovation, Boston AutoLytics, Adimab, Microgradient Fluidics, UMass Medical School, and the University of Pennsylvania
+
 ## Installation
 
-Manual installation requires anaconda python 3.6
+pip install -i https://test.pypi.org/simple/ PyVuka==0.1.11
 
 ## Example as PyVuka as a python Library
 
