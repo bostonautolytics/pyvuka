@@ -7,7 +7,7 @@
 #-----------------------------------------------------------------------------------------
 import ModuleLink.toPyVuka as pyvuka
 import os
-import Modules.ipi_common as IPI
+from PyVuka import Modules as IPI
 import xml.etree.ElementTree as xmlio
 import base64
 import pack64
