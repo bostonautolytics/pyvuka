@@ -1,0 +1,13 @@
+#
+#                         ForteBio Analysis Script Example
+#  # - indicates ignored line
+#  ! - indicates text to print to screen
+#  ? - indicates user response required [varible is (including brackets): [user_input]  ]
+#-----------------------------------------------------------------------------------------
+
+#[1] use native PyVuka commands to clear the data matrix and call a custom module
+cl all
+exec -module fortebio.py auto_analysis()
+
+#[2]   Quit Pyvuka
+quit
