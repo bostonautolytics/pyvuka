@@ -1,3 +1,10 @@
+  
+#
+#                         ForteBio Analysis Module Example
+#  PyVuka Modules are native python code.  They can import PyVuka as a module to run native
+#  PyVuka commands(import ModuleLink.toPyVuka as pyvuka) or access the PyVuka data directly
+#  (import data_obj as data).
+#-----------------------------------------------------------------------------------------
 import ModuleLink.toPyVuka as pyvuka
 import os
 import Modules.ipi_common as IPI
