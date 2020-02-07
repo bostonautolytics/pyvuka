@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="PyVuka", # Replace with your own username
-    version="0.1.3",
+    version="0.1.6",
     author="R Paul Nobrega",
     author_email="Paul@PaulNobrega.net",
     description="General Purpose Global Data Analysis Package",
@@ -13,8 +13,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/bostonautolytics/pyvuka",
     packages=setuptools.find_packages(),
-    setup_requires=['numpy', 'scipy', 'matplotlib', 'pillow', 'xlsxwriter', 'chardet', 'psutil', 'pack64', 'FlowCytometryTools', 'tika'],
-    install_requires=['numpy', 'scipy', 'matplotlib', 'pillow', 'xlsxwriter', 'chardet', 'psutil', 'pack64', 'FlowCytometryTools', 'tika'],
+    install_requires=['numpy', 'scipy', 'matplotlib', 'pillow', 'xlsxwriter', 'chardet', 'psutil', 'pack64'],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: Free For Educational Use",
