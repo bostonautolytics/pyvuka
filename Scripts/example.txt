@@ -7,7 +7,7 @@
 
 #[1] use native PyVuka commands to clear the data matrix and call a custom module
 cl all
-exec -module fortebio.py auto_analysis()
+exec -module example.py auto_analysis()
 
 #[2]   Quit Pyvuka
 quit
