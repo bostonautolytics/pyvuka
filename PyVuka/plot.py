@@ -1,4 +1,8 @@
 import matplotlib
+try:
+    matplotlib.use('PyQT5')  # Required for gui plotting
+except Exception as e:
+    matplotlib.use('Agg')  # Permits running headless
 import matplotlib.pyplot as pl
 from matplotlib.ticker import MaxNLocator
 import matplotlib.patheffects as pe
