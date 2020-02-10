@@ -6,14 +6,14 @@ This project has been supported by the Institute of Protein Innovation, Boston A
 
 ## Installation
 
-pip install -i https://test.pypi.org/simple/ PyVuka==0.1.11
+pip install -i https://test.pypi.org/simple/ PyVuka==0.1.12
 
 ## Example as PyVuka as a python Library
 
 #### Code
 ```python
 # use PyVuka code base as a library
-import ModuleLink.toPyVuka as pvk
+from PyVuka.ModuleLink import ModuleLink as pvk
 
 # initialize pyvuka
 pvk.initialize_instance()

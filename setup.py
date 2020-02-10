@@ -1,14 +1,15 @@
 import setuptools
+import PyVuka.pyvuka as pvk
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="PyVuka",
-    version="0.1.11",
-    author="R Paul Nobrega",
-    author_email="Paul@PaulNobrega.net",
-    description="General Purpose Global Data Analysis Package",
+    name=pvk.__name__,
+    version=pvk.__version__,
+    author=pvk.__author__,
+    author_email=pvk.__email__,
+    description=pvk.__description__,
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/bostonautolytics/pyvuka",
