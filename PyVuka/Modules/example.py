@@ -4,7 +4,7 @@
 #  PyVuka commands(import ModuleLink.toPyVuka as pyvuka) or access the PyVuka data directly
 #  (import data_obj as data).
 #-----------------------------------------------------------------------------------------
-from PyVuka.ModuleLink import ModuleLink as pyvuka
+from PyVuka.ModuleLink import toPyVuka as pyvuka
 import os
 from PyVuka import Modules as IPI
 import xml.etree.ElementTree as xmlio

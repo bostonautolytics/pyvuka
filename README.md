@@ -6,35 +6,25 @@ This project has been supported by the Institute of Protein Innovation, Boston A
 
 ## Installation
 
-pip install -i https://test.pypi.org/simple/ PyVuka==0.1.12
+pip install PyVuka
 
 ## Example as PyVuka as a python Library
 
 #### Code
 ```python
-# use PyVuka code base as a library
-from PyVuka.ModuleLink import ModuleLink as pvk
+import PyVuka.ModuleLink.toPyVuka as pvk  # use PyVuka code base as a library
 
-# initialize pyvuka
-pvk.initialize_instance()
-# create new data buffer
-buffer = pvk.new_buffer()
-# populate x and y data vectors
-buffer.data.x.set([0,1,2,3,4,5,6,7,8,9])
+pvk.initialize_instance()  # initialize pyvuka
+buffer = pvk.new_buffer()  # create new data buffer
+buffer.data.x.set([0,1,2,3,4,5,6,7,8,9])  # populate x and y data vectors
 buffer.data.y.set([0,0.5,1.75,3.5,4,4.85,6.2,7.1,7.9,9.3])
-# add axes titles
-buffer.plot.axis.x.title.set("random int")
+buffer.plot.axis.x.title.set("random int")  # add axes titles
 buffer.plot.axis.y.title.set("random float")
-# add buffer to data matrix
-pvk.add_buffer_to_datamatrix(buffer)
-# select function 27 (Y=mx+b)
-pvk.run_pyvuka_command('fun 27 0')
-# alter function 27 parameters. "For buffer 1 through buffer 1, slope guess = 1, y-intercept guess = 1"
-pvk.run_pyvuka_command('ap 1 1 1 1')
-# fit all data in matrix with function 27
-pvk.run_pyvuka_command('fit')
-# Show plot on screen and save to drive
-pvk.show_plot(1)
+pvk.add_buffer_to_datamatrix(buffer)  # add buffer to data matrix
+pvk.run_pyvuka_command('fun 27 0')  # select function 27 (Y=mx+b)
+pvk.run_pyvuka_command('ap 1 1 1 1')  # alter parameters of function 27. "For buffer 1 through buffer 1, slope guess = 1, y-intercept guess = 1"
+pvk.run_pyvuka_command('fit')  # fit all data in matrix with function 27
+pvk.show_plot(1) # Show plot of buffer 1 on screen and save to drive
 pvk.save_plot(1, "test.png")
 ```
 #### Ouput
@@ -45,8 +35,7 @@ pvk.save_plot(1, "test.png")
 
 #### Code
 ```python
-# Use Pyvuka as a command line app
-import PyVuka.pyvuka as app
+import PyVuka.app as app # Use Pyvuka as a command line app 
 
 app.start()
 ```
