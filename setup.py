@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name=pvk.__name__,
+    name=pvk.__app_name__,
     version=pvk.__version__,
     author=pvk.__author__,
     author_email=pvk.__email__,

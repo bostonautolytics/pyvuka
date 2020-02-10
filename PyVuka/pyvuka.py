@@ -11,12 +11,12 @@ import os
 from PyVuka import commands, data_obj as data
 
 __author__ = "R. Paul Nobrega"
-__name__ = "PyVuka"
+__app_name__ = "PyVuka"
 __description__ = "A General Purpose Global Data Analysis Package"
 __copyright__ = "Copyright 2017, www.BostonAutoLytics.com"
 __credits__ = "R. Paul Nobrega, Osman Bilsel, & David G. Lambright"
 __license__ = "GPL"
-__version__ = "0.0.1"
+__version__ = "0.0.11"
 __maintainer__ = "R. Paul Nobrega"
 __email__ = "Paul@BostonAutoLytics.com"
 __status__ = "Development"
