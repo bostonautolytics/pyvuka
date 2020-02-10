@@ -52,10 +52,10 @@ def start():
         else:
             initargs = " ".join(map(str, sys.argv[1:])).split(';')
         for initarg in initargs:
-            print("PyVUKA> " + initarg)
+            print("PyVuka> " + initarg)
             print(commander(initarg))
     while not exitflag:
-        userinput = input("\nPyVUKA> ")
+        userinput = input("\nPyVuka> ")
         userinput = userinput.split(';')
         for command in userinput:
             output = commander(command)
