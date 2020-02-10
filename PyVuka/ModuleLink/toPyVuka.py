@@ -175,10 +175,10 @@ def get_plot_as_bytestring(list_of_datamatrix_idicies, *args, **kwargs):
             pass
 
     img = plot.plotter()
-    #try:
-    return BIO(img(list_of_datamatrix_idicies, get_bytes=True, dpi=dpi, tight=tight, black_models=black_models))
-    #except Exception as e:
-    #    raise Exception(f'Could not generate plot:\n\t{str(e)}')
+    try:
+        return BIO(img(list_of_datamatrix_idicies, get_bytes=True, dpi=dpi, tight=tight, black_models=black_models))
+    except Exception as e:
+        raise Exception(f'Could not generate plot:\n\t{str(e)}')
 
 
 def __single_int_to_list(list_of_datamatrix_idicies):
