@@ -600,8 +600,8 @@ class Buffer(object):
                 def __init__(self):
                     self.__color_val = 'r'
 
-                def set(self, color: str):
-                    self.__color_val = str(color)
+                def set(self, color):
+                    self.__color_val = color
 
                 def get(self) -> str:
                     return self.__color_val
