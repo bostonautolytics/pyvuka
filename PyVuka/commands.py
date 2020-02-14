@@ -725,7 +725,7 @@ class Command(object):
             buffer.data.ye.set(yetemp)
             buffer.data.z.set(ztemp)
             buffer.data.ze.set(zetemp)
-            #buffer.comments.add("Data Resampled to %s points" % npoints)
+            buffer.comments.add("Data Resampled to %s points" % npoints)
             data.matrix.add_buffer(buffer)
         return '\nData Successfully Resampled!'
 
