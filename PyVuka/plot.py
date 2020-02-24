@@ -23,9 +23,9 @@ class plotter(object):
         directory = "c:\\"
         pl.close('all')
         print("Plotting...")
-        self.__global_xlim = (0, 0)
-        self.__global_ylim = (0, 0)
-        self.__global_ylim_resid = (0, 0)
+        self.__global_xlim = (-0.1, 0.1)
+        self.__global_ylim = (-0.1, 0.1)
+        self.__global_ylim_resid = (-0.1, 0.1)
         self.__resid_ax = False
         self.__scatter_ax = False
         self.__scatter_fig = False

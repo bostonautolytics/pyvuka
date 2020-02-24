@@ -2,7 +2,6 @@ import numpy as np
 from scipy import stats
 import ast
 import os
-import json
 
 
 global matrix
@@ -170,7 +169,7 @@ class Data(object):
         def on(self):
             if self.is_active:
                 return
-            self.__matrix_save = self.__copy_matrix_data()  # faster than using copy.deepcopy
+            self.__copy_matrix_data()  # faster than using copy.deepcopy
 
             if len(self.buffer_range.get()) > 0:
                 firstbuffer, lastbuffer = [min(self.buffer_range.get()), max(self.buffer_range.get())]
@@ -191,7 +190,8 @@ class Data(object):
                 save_dict['z'] = list(matrix.buffer(i).data.z.get())
                 save_dict['ze'] = list(matrix.buffer(i).data.ze.get())
                 save_list.append(save_dict)
-            return json.loads(json.dumps(save_list))
+            self.__matrix_save = save_list
+            return
 
         def off(self):
             if not self.is_active:
@@ -218,31 +218,36 @@ class Data(object):
             z = new_buffer.data.z.get()
             ze = new_buffer.data.ze.get()
 
-            x_range = plot_limits.x_range.get()
-            y_range = plot_limits.y_range.get()
-            z_range = plot_limits.z_range.get()
-            idx_out = [i for i, j in enumerate(x) if not min(x_range)-1 <= i <= max(x_range)-1] if len(x_range) > 0 else [] + \
-                [i for i, j in enumerate(y) if not min(y_range)-1 <= j <= max(y_range)-1] if len(y_range) > 0 else [] + \
-                [i for i, j in enumerate(z) if not min(z_range)-1 <= j <= max(z_range)-1] if len(z_range) > 0 else []
+            x_range = (None, None) if len(plot_limits.x_range.get()) == 0 else plot_limits.x_range.get()
+            y_range = (None, None) if len(plot_limits.y_range.get()) == 0 else plot_limits.y_range.get()
+            z_range = (None, None) if len(plot_limits.z_range.get()) == 0 else plot_limits.z_range.get()
 
-            if len(idx_out) == 0:
+            if None in x_range and None in y_range and None in z_range:  # if points are not limited
+                min_idx = [0]
+                max_idx = [new_buffer.data.x.length()]
+            else:
+                min_idx = [1E20 if None in x_range else min(x_range),
+                           1E20 if None in y_range else min(y_range),
+                           1E20 if None in z_range else min(z_range)]
+                max_idx = [-1E20 if None in x_range else max(x_range),
+                           -1E20 if None in y_range else max(y_range),
+                           -1E20 if None in z_range else max(z_range)]
+
+            if max(max_idx) - min(min_idx) <= 0:
                 return buffer_object
 
-            idx_out = list(set(sorted(idx_out)))
             all_data = [x, y, z, xe, ye, ze]
             for i, data_vector in enumerate(all_data):
-                if len(data_vector) > 0:
-                    if max(idx_out) <= len(data_vector):
-                        all_data[i] = np.delete(data_vector, idx_out)
+                tmin = min(min_idx)-1
+                tmax = max(max_idx)
+                all_data[i] = data_vector[min(min_idx)-1:max(max_idx)]
 
-            x, y, z, xe, ye, ze = all_data
-
-            new_buffer.data.x.set(x)
-            new_buffer.data.xe.set(xe)
-            new_buffer.data.y.set(y)
-            new_buffer.data.ye.set(ye)
-            new_buffer.data.z.set(z)
-            new_buffer.data.ze.set(ze)
+            new_buffer.data.x.set(all_data[0])
+            new_buffer.data.xe.set(all_data[3])
+            new_buffer.data.y.set(all_data[1])
+            new_buffer.data.ye.set(all_data[4])
+            new_buffer.data.z.set(all_data[2])
+            new_buffer.data.ze.set(all_data[5])
             return new_buffer
 
         class _base_range(object):
