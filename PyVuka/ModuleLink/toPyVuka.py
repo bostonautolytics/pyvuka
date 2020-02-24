@@ -1,16 +1,16 @@
 #!/usr/bin/env python
-#title           :toPyVuka.py
-#author          :R. Paul Nobrega, IPI
-#contact         :Paul.Nobrega@ProteinInnovation.com
-#description     :This file contains code that interfaces code within PyVuka modules to the global PyVuka classes:
+# title           :toPyVuka.py
+# author          :R. Paul Nobrega, IPI
+# contact         :Paul.Nobrega@ProteinInnovation.com
+# description     :This file contains code that interfaces code within PyVuka modules to the global PyVuka classes:
 #                     -gvars [global variables]
 #                     -plot  [plotting class]
 #                     -commands [class to process native PyVuka commands]
 #                 These adapter functions permit facile invocation of native PyVuka plotting functions and direct
 #                 manipulation of the existing buffers and datamatrix
-#usage           :Pyvuka module
-#python_version  :3.7
-#==============================================================================
+# usage           :Pyvuka module
+# python_version  :3.7
+# ==============================================================================
 #
 # !ATTENTION!
 # Modules accept the buffer matrix from Pyvuka. Additional data can be passed into the function, but "datamatrix"
@@ -30,6 +30,10 @@ def initialize_instance():
         data.init()
 
 
+def clear_all():
+    initialize_instance()
+
+
 def new_datamatrix():
     return data.Data().matrix
 
@@ -43,7 +47,7 @@ def get_datamatrix():
 
 
 def append_datamatrix(datamatrix_to_append):
-    for i in range(1, datamatrix_to_append.length() +1):
+    for i in range(1, datamatrix_to_append.length() + 1):
         data.matrix.add_buffer(datamatrix_to_append.buffer(i))
 
 
@@ -51,7 +55,7 @@ def write_buffer_at_buffer_number(buffer, buffer_number):
     if not 1 <= buffer_number <= data.matrix.length():
         raise ValueError('Supplied matrix index is invalid!')
     if isinstance(buffer, type(data.Buffer())):
-        data.matrix.buffer[buffer_number] = buffer
+        data.matrix.set_buffer_by_number(buffer, buffer_number)
         return data.matrix
     raise TypeError('Supplied buffer object is not a valid instance of a PyVuka DataMatrix Data Buffer!')
 
@@ -59,7 +63,7 @@ def write_buffer_at_buffer_number(buffer, buffer_number):
 def set_datamatrix(input_datamatrix):
     if isinstance(input_datamatrix, type(data.matrix)) and \
             input_datamatrix.length() > 0 and isinstance(input_datamatrix.buffer(1), type(data.Buffer())):
-        data.matrix = input_datamatrix
+        data.matrix.set(input_datamatrix.get())
         return data.matrix
     raise TypeError('Invalid PyVuka datamatrix Object!')
 
@@ -80,24 +84,39 @@ def remove_buffer_from_datamatrix(buffer_number):
 
 
 def get_plot_limit_params():
-    return data.plot_limits
+    self.buffer_range = self._BufferRange()
+    self.x_range = self._XYZRange()
+    self.y_range = self._XYZRange()
+    self.z_range = self._XYZRange()
+    self.__matrix_save = None
+    self.is_active = False
+    return {'buffer_range': data.plot_limits.buffer_range.get(),
+            'x_range': data.plot_limits.x_range.get(),
+            'y_range': data.plot_limits.y_range.get(),
+            'z_range': data.plot_limits.z_range.get(),
+            'limits_are_active': data.plot_limits.is_active}
 
 
-def set_plot_limit_params(plot_limit_parameter_obj):
-    if isinstance(plot_limit_parameter_obj, type(data.plot_limits)):
-        data.plot_limits = plot_limit_parameter_obj
-        return data.plot_limits
-    raise TypeError('Invalid PyVuka Plot Limits Object!')
+def set_plot_limit_params(plot_limit_dict):
+    if isinstance(plot_limit_dict, type({})):
+        data.plot_limits.buffer_range.set(plot_limit_dict['buffer_range'])
+        data.plot_limits.x_range.set(plot_limit_dict['x_range'])
+        data.plot_limits.y_range.set(plot_limit_dict['y_range'])
+        data.plot_limits.z_range.set(plot_limit_dict['z_range'])
+        data.plot_limits.is_active = bool(plot_limit_dict['limits_are_active'])
+        return get_plot_limit_params()
+    raise TypeError('Invalid PyVuka Plot Limits Dict!  Use "get_plot_limit_params()" for an example')
 
 
 def get_system_variables():
-    return data.directories
+    return {'working': data.directories.working.get(), 'output': data.directories.output.get()}
 
 
-def set_system_variables(system_variables_obj):
-    if isinstance(system_variables_obj, type(data.directories)):
-        data.directories = system_variables_obj
-        return data.directories
+def set_system_variables(system_variables_dict):
+    if isinstance(system_variables_dict, type({})):
+        data.directories.working.set(system_variables_dict['working'])
+        data.directories.output.set(system_variables_dict['output'])
+        return get_system_variables()
     raise TypeError('Invalid PyVuka System Variables Object!')
 
 
@@ -215,4 +234,3 @@ def run_pyvuka_command(native_pyvuka_command):
         return commander(native_pyvuka_command)
     except Exception as e:
         raise ValueError(f'Invalid PyVuka command!\n\t{str(e)}')
-
