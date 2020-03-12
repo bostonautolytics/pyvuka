@@ -4,6 +4,7 @@ import xlsxwriter as XL
 import xml.etree.ElementTree as xmlio
 import base64
 from PyVuka import data_obj as data, plot, fitfxns, inputprocessing
+import matplotlib
 from matplotlib import pyplot as pl
 import os
 import chardet
@@ -705,7 +706,8 @@ def colorallseries():
     colors = [pl.cm.gist_rainbow(x) for x in cm_subsection]
 
     for i, color in enumerate(colors):
-        data.matrix.buffer(i).plot.series.color.set(color)
+        color = tuple([int(c) for c in colors])
+        data.matrix.buffer(i).plot.series.color.set(matplotlib.colors.to_hex(color))
     return True
 
 

@@ -899,6 +899,59 @@ class Command(object):
                 buffer.data.y.set(buffer.data.y.get() * const)
         return '\nData Successfully Multiplied!'
 
+    def do_mod(self, *args):
+        """\nCommand: MODel data with current parameters\n
+        Description:
+        \tModels defined function with defined parameters
+
+        Example Usage:
+        \tmod 1 2         (Models function for buffers 1 through 2)
+        \tmod -all        (Models function for all buffers)
+
+        Default Input: N/A
+
+        Default Options: N/A
+
+        \t-all     (Models function for all buffers)
+
+        Notes:
+        \tN/A
+        """
+        inparse = inputprocessing.InputParser()
+        lastbuffer = data.matrix.length()
+        firstbuffer = 1
+        inparse.prompt = ["First Buffer", "Last Buffer"]
+        inparse.inputbounds = [[firstbuffer, lastbuffer], [firstbuffer, lastbuffer]]
+        inparse.defaultinput = [firstbuffer, lastbuffer]
+
+        if not inparse(args):
+            return "Invalid Input!"
+        if not inparse.getparams():
+            return "\nNo Data Was Multiplied!"
+
+        inparse.userinput = [int(val) for val in inparse.userinput]
+        if "-all" not in inparse.cmdflags:
+            firstbuffer, lastbuffer= inparse.userinput
+
+        xr = data.plot_limits.x_range.get()
+        yr = data.plot_limits.y_range.get()
+        zr = data.plot_limits.z_range.get()
+        br = data.plot_limits.buffer_range.get()
+        ms = data.plot_limits.__matrix_save
+        ma = data.plot_limits.is_active
+
+        commander = commands.Command()
+        commander(f'pl off;pl {firstbuffer} {lastbuffer} {min(xr)} {max(xr)};pl on;fit 1;pl off')
+
+        data.plot_limits.x_range.set(xr)
+        data.plot_limits.y_range.set(yr)
+        data.plot_limits.z_range.set(zr)
+        data.plot_limits.buffer_range.set(br)
+        data.plot_limits.__matrix_save = ms
+        data.plot_limits.is_active = ma
+        return '\nData Successfully Modeled!'
+
+
     def do_ori(self, *args):
         """\nCommand: ORIgin\n
         Description:
@@ -1101,17 +1154,17 @@ class Command(object):
         fxnlist = fitter.getfxnlist()
         fxnlist = [int(val) for val in fxnlist]
         args = [val.lower() for val in args]
-        if len(args) == 0:
-            # list function list here
-            return fitter.showfxntable()
+        # Parse user arguments
         inparse = inputprocessing.InputParser()
         inparse(args)
-        if 'info' in inparse.modifiers:
-            return fitter(args)
-        if data.matrix.length() == 0:
+
+        if len(args) == 0:  # If no arguments provided, return list of available functions
+            return fitter.showfxntable()
+        elif data.matrix.length() == 0:  # If data matrix is invalid, return call
             return "No Data in Memory! Functions Cannot Be Applied!"
-        if len(inparse.userinput) > 0 and 'info' not in inparse.modifiers \
-                and 0 in inparse.userinput and inparse.userinput[-1] == 0:
+        elif 'info' in inparse.modifiers:  # If info in args, show function info
+            return fitter(args)
+        elif len(inparse.userinput) > 0 and inparse.userinput[-1] == 0: # If function request is closed, define fitter
             for num in inparse.userinput[:-1]:
                 try:
                     temp = int(num)
@@ -1126,8 +1179,7 @@ class Command(object):
                     return success + str(fitter.funcindex)
                 else:
                     return"\nInvalid Functions Specified!"
-        elif len(inparse.userinput) > 0 and 'info' not in inparse.modifiers \
-                and 0 not in inparse.userinput and inparse.userinput[-1] != 0:
+        elif len(inparse.userinput) > 0 and inparse.userinput[-1] != 0: # If  function request is not closed, append function to fitter definition
             for val in inparse.userinput:
                 try:
                     temp = int(val)
@@ -1136,8 +1188,9 @@ class Command(object):
                         count += 1
                 except ValueError:
                     return fail
-        print("\nEnter functions to concatenate, enter 0 to stop.\n")
 
+        # prompt user to complete fxn definition
+        print("\nEnter functions to concatenate, enter 0 to stop.\n")
         while userin > 0:
             userin = input("Enter Function #" + str(count)+" :  ")
             try:
@@ -1149,6 +1202,7 @@ class Command(object):
                 fitter.funcindex.append(userin)
             elif userin != 0:
                 print("Not a Valid Function!")
+        # Apply fxn definitions to fitter object and return success/fail
         if fitter.applyfxns():
             return success + str(fitter.funcindex)
         else:
@@ -1200,14 +1254,14 @@ class Command(object):
                 commander("pl on")
             else:
                 commander("pl off")
-        if "-ind" in args: ### if -ind flag, restore original links ###
+        if "-ind" in args:  ### if -ind flag, restore original links ###
             for i in range(firstbuffer, lastbuffer + 1):
                 buffer = data.matrix.buffer(i)
-                buffer.fit.link.set(alllinks[i-1])
+                buffer.fit.link.set(alllinks[i - 1])
             return "\nIndependent Fitting Complete!"
         elif not linked:
             return "\nIndependent Fitting Complete!"
-        else: ### if data is linked we run global fitting ###
+        else:  ### if data is linked we run global fitting ###
             print(fitfxns.dofit(*args))
             return "\nGlobal Fitting Complete!"
 

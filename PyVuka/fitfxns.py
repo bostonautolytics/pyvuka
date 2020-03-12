@@ -122,7 +122,7 @@ class datafit(object):
     def fxn_14(self, *args):
         """Protein Folding Equilibrium: 2-state Equilibrium, Chemical Denaturant
         \nDescription: Model for equilibrium titration data describing 2 thermodynamic states (U->N)
-        \nPubMed ID: [Not defined]
+        \nPubMed ID: 17406529
         \nParameters:
         \tdG \t(Delta G in kcal/Mol)
         \tm  \t(m-value, denaturant dependence of transition in kcal/mol/M)
@@ -134,18 +134,11 @@ class datafit(object):
 
         Note: This function requires the X-values to be denaturant concentrations and the Y-values are the experimental signal at that denaturant concentration
         """
-        #delta_g_at_concentration = (P[0]+P[1]*X)
-        #equilibrium_constant = (np.exp(-1*(P[0] + P[1] * X)/(1.9872036*P[6])))
-        #unfolded_fraction = ((np.exp(-1*(P[0] + P[1] * X)/(1.9872036*P[6]))) / (1 + (np.exp(-1*(P[0] + P[1] * X)/(1.9872036*P[6])))))
-        #native_y_at_concentration = P[2] + P[4] * X
-        #unfolded_y_at_concentration = P[3] + P[5] * X
-        #return unfolded_fraction*unfolded_y_at_concentration + (1-unfolded_fraction)*native_y_at_concentration
-
         self.paramid.extend(["dG", "m", "Cn", "Cu", "Mn", "Mu", "T"])
         self.parambounds.extend([[-np.inf, np.inf], [-np.inf, np.inf], [-np.inf, np.inf], [-np.inf, np.inf],
                                  [-np.inf, np.inf], [-np.inf, np.inf], [-np.inf, np.inf]])
         self.paramdefaults.extend([5, 1.8, 0, 25000, 1000, 2, 298.15])
-        self.functions.extend(["Y=((np.exp(-1*(P[0] + P[1] * X)/(1.9872036*P[6]))) / (1 + (np.exp(-1*(P[0] + P[1] * X)/(1.9872036*P[6])))))*(P[3] + P[5] * X) + (1-((np.exp(-1*(P[0] + P[1] * X)/(1.9872036*P[6]))) / (1 + (np.exp(-1*(P[0] + P[1] * X)/(1.9872036*P[6]))))))*(P[2] + P[4] * X)"])
+        self.functions.extend(["Y=((np.exp(((-1 * P[0]) + ((P[4]+P[5]) * X)) / gas_const_kcal * P[6]))/((np.exp(((-1 * P[0]) + ((P[4]+P[5]) * X)) / gas_const_kcal * P[6]))+1)) *((P[2] + (P[4] * X) - P[3] - (P[5] * X)) + P[3] + (P[5] * X))"])
         self.pyscriptonly = True
         return
 

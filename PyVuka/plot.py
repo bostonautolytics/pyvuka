@@ -224,8 +224,8 @@ class plotter(object):
         show_y_lines = buffer.plot.axis.y.lines.is_visible
         y_lines = buffer.plot.axis.x.lines.get()
         show_peaks = buffer.plot.axis.y.peaks.is_visible
-        peaks = buffer.plot.axis.y.peaks.get()
-        peak_indicies = [buffer.data.y.nearest_index_to_value(p) for p in peaks]
+        peak_indicies = buffer.plot.axis.y.peaks.get()
+        peaks = [Y[p] for p in peak_indicies]
         show_peak_bounds = buffer.plot.axis.y.peak_bounds.is_visible
         peak_bounds = buffer.plot.axis.y.peak_bounds.get()
         peak_bounds_indicies = [tuple([buffer.data.y.nearest_index_to_value(p[0]),
