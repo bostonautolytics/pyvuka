@@ -138,7 +138,7 @@ class datafit(object):
         self.parambounds.extend([[-np.inf, np.inf], [-np.inf, np.inf], [-np.inf, np.inf], [-np.inf, np.inf],
                                  [-np.inf, np.inf], [-np.inf, np.inf], [-np.inf, np.inf]])
         self.paramdefaults.extend([5, 1.8, 0, 25000, 1000, 2, 298.15])
-        self.functions.extend(["Y=((np.exp(((-1 * P[0]) + ((P[4]+P[5]) * X)) / gas_const_kcal * P[6]))/((np.exp(((-1 * P[0]) + ((P[4]+P[5]) * X)) / gas_const_kcal * P[6]))+1)) *((P[2] + (P[4] * X) - P[3] - (P[5] * X)) + P[3] + (P[5] * X))"])
+        self.functions.extend(["Y=((np.exp(((-1 * P[0]) + (P[1] * X)) / gas_const_kcal * P[6]))/((np.exp(((-1 * P[0]) + (P[1] * X)) / gas_const_kcal * P[6]))+1)) *((P[2] + (P[4] * X) - P[3] - (P[5] * X)) + P[3] + (P[5] * X))"])
         self.pyscriptonly = True
         return
 

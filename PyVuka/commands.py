@@ -111,8 +111,8 @@ class Command(object):
             inparse.prompt = ["First Buffer", "Last Buffer", "First Point", "Last Point"]
             inparse.inputbounds = [[1, lastbuffer], [1, lastbuffer],
                                    [1, min_idx],
-                                   [0, max_idx]]
-            inparse.defaultinput = ['1', str(lastbuffer), min_idx, max_idx]
+                                   [1, max_idx]]
+            inparse.defaultinput = ['1', str(lastbuffer), str(min_idx), str(max_idx)]
         if not inparse(args):
             return "Invalid input!"
         else:
@@ -920,34 +920,39 @@ class Command(object):
         inparse = inputprocessing.InputParser()
         lastbuffer = data.matrix.length()
         firstbuffer = 1
-        inparse.prompt = ["First Buffer", "Last Buffer"]
-        inparse.inputbounds = [[firstbuffer, lastbuffer], [firstbuffer, lastbuffer]]
-        inparse.defaultinput = [firstbuffer, lastbuffer]
 
-        if not inparse(args):
-            return "Invalid Input!"
-        if not inparse.getparams():
-            return "\nNo Data Was Multiplied!"
+        if '-all' not in args and 'all' not in args:
+            inparse.prompt = ["First Buffer", "Last Buffer"]
+            inparse.inputbounds = [[firstbuffer, lastbuffer], [firstbuffer, lastbuffer]]
+            inparse.defaultinput = [firstbuffer, lastbuffer]
 
-        inparse.userinput = [int(val) for val in inparse.userinput]
-        if "-all" not in inparse.cmdflags:
+            if not inparse(args):
+                return "Invalid Input!"
+            if not inparse.getparams():
+                return "\nNo Data Was Modeled!"
+
+            inparse.userinput = [int(val) for val in inparse.userinput]
             firstbuffer, lastbuffer= inparse.userinput
 
         xr = data.plot_limits.x_range.get()
         yr = data.plot_limits.y_range.get()
         zr = data.plot_limits.z_range.get()
         br = data.plot_limits.buffer_range.get()
-        ms = data.plot_limits.__matrix_save
         ma = data.plot_limits.is_active
 
         commander = commands.Command()
-        commander(f'pl off;pl {firstbuffer} {lastbuffer} {min(xr)} {max(xr)};pl on;fit 1;pl off')
+        pti = 1 if not xr else min(xr)
+        ptf = data.matrix.buffer(1).data.x.length() if not xr else max(xr)
+        commander(f'pl off')
+        commander(f'pl {firstbuffer} {lastbuffer} {pti} {ptf}')
+        commander(f'pl on')
+        commander(f'fit')
+        commander(f'pl off')
 
         data.plot_limits.x_range.set(xr)
         data.plot_limits.y_range.set(yr)
         data.plot_limits.z_range.set(zr)
         data.plot_limits.buffer_range.set(br)
-        data.plot_limits.__matrix_save = ms
         data.plot_limits.is_active = ma
         return '\nData Successfully Modeled!'
 
