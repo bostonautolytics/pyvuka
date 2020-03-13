@@ -1,9 +1,9 @@
 import numpy as np
 from lmfit import minimize, Parameters, report_fit
-from PyVuka import data_obj as data
+import data_obj as data
 
 #constants
-gas_const_kcal = 1.9872036
+gas_const_kcal = .0019872036
 
 class datafit(object):
     """extend with fxn_index  methods. index must be an integer.
@@ -138,8 +138,8 @@ class datafit(object):
         self.parambounds.extend([[-np.inf, np.inf], [-np.inf, np.inf], [-np.inf, np.inf], [-np.inf, np.inf],
                                  [-np.inf, np.inf], [-np.inf, np.inf], [-np.inf, np.inf]])
         self.paramdefaults.extend([5, 1.8, 0, 25000, 1000, 2, 298.15])
-        self.functions.extend(["Y=((np.exp(((-1 * P[0]) + (P[1] * X)) / gas_const_kcal * P[6]))/((np.exp(((-1 * P[0]) + (P[1] * X)) / gas_const_kcal * P[6]))+1)) *((P[2] + (P[4] * X) - P[3] - (P[5] * X)) + P[3] + (P[5] * X))"])
-        self.pyscriptonly = True
+        self.functions.extend(["Y=(P[2]+(P[4]*X))+((P[3]+(P[5]*X))*np.exp((P[0]-(P[1]*X))/(gas_const_kcal*P[6])))/(1+np.exp((P[0]-(P[1]*X))/(gas_const_kcal*P[6])))"])
+        self.pyscriptonly = False
         return
 
     def fxn_39(self, *args):

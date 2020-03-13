@@ -11,7 +11,7 @@ from matplotlib.ticker import MaxNLocator
 import matplotlib.patheffects as pe
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
-from PyVuka import data_obj as data
+import data_obj as data
 from io import BytesIO as BIO
 from PIL import Image
 import warnings
@@ -214,7 +214,7 @@ class plotter(object):
         X_resid = buffer.residuals.x.get()
         Y_resid = buffer.residuals.y.get()
         Z_resid = buffer.residuals.z.get()
-        series_color = buffer.plot.series.color.get() if buffer.plot.series.color.get() != '' else 'r'
+        series_color = matplotlib.colors.to_hex(buffer.plot.series.color.get() if buffer.plot.series.color.get() != '' else 'r', keep_alpha=True)
         series_weight = buffer.plot.series.weight.get()
         x_axis_title = buffer.plot.axis.x.title.get()
         y_axis_title = buffer.plot.axis.y.title.get()

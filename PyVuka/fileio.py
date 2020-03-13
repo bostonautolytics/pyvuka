@@ -3,7 +3,7 @@ import xlrd
 import xlsxwriter as XL
 import xml.etree.ElementTree as xmlio
 import base64
-from PyVuka import data_obj as data, plot, fitfxns, inputprocessing
+import data_obj as data, plot, fitfxns, inputprocessing
 import matplotlib
 from matplotlib import pyplot as pl
 import os

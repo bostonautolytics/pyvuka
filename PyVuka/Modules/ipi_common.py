@@ -31,7 +31,7 @@ import errno
 import multiprocessing
 import psutil
 import smtplib
-from PyVuka import data_obj as data
+import data_obj as data
 import stat
 
 

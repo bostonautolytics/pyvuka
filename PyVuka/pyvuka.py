@@ -8,7 +8,8 @@
 #==============================================================================
 import sys
 import os
-from PyVuka import commands, data_obj as data
+import commands as commands
+import data_obj as data
 
 __author__ = "R. Paul Nobrega"
 __app_name__ = "PyVuka"
