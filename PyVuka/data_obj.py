@@ -184,12 +184,12 @@ class Data(object):
             save_list = []
             for i in range(1, len(matrix) + 1):
                 save_dict = {}
-                save_dict['x'] = list(matrix.buffer(i).data.x.get())
-                save_dict['xe'] = list(matrix.buffer(i).data.xe.get())
-                save_dict['y'] = list(matrix.buffer(i).data.y.get())
-                save_dict['ye'] = list(matrix.buffer(i).data.ye.get())
-                save_dict['z'] = list(matrix.buffer(i).data.z.get())
-                save_dict['ze'] = list(matrix.buffer(i).data.ze.get())
+                save_dict['x'] = list(matrix.buffer(i).data.x.get().astype(float))
+                save_dict['xe'] = list(matrix.buffer(i).data.xe.get().astype(float))
+                save_dict['y'] = list(matrix.buffer(i).data.y.get().astype(float))
+                save_dict['ye'] = list(matrix.buffer(i).data.ye.get().astype(float))
+                save_dict['z'] = list(matrix.buffer(i).data.z.get().astype(float))
+                save_dict['ze'] = list(matrix.buffer(i).data.ze.get().astype(float))
                 save_list.append(save_dict)
             return json.loads(json.dumps(save_list))
 

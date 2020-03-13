@@ -1,6 +1,6 @@
 import numpy as np
 from lmfit import minimize, Parameters, report_fit
-import data_obj as data
+from . import data_obj as data
 
 #constants
 gas_const_kcal = .0019872036
@@ -122,7 +122,7 @@ class datafit(object):
     def fxn_14(self, *args):
         """Protein Folding Equilibrium: 2-state Equilibrium, Chemical Denaturant
         \nDescription: Model for equilibrium titration data describing 2 thermodynamic states (U->N)
-        \nPubMed ID: 17406529
+        \nPubMed ID: 15689503
         \nParameters:
         \tdG \t(Delta G in kcal/Mol)
         \tm  \t(m-value, denaturant dependence of transition in kcal/mol/M)

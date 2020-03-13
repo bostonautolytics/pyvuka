@@ -6,7 +6,7 @@
 #                 app.start()
 #python_version  :3.7
 #==============================================================================
-import pyvuka
+from . import pyvuka
 
 
 def start():

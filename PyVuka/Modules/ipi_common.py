@@ -31,7 +31,7 @@ import errno
 import multiprocessing
 import psutil
 import smtplib
-import data_obj as data
+from .. import data_obj as data
 import stat
 
 

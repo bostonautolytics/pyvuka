@@ -1,6 +1,6 @@
 import sys
 import os.path
-import data_obj as data, plot, fitfxns, fileio, Modules, commands, numericalmethods, inputprocessing
+from . import data_obj as data, plot, fitfxns, fileio, Modules, commands, numericalmethods, inputprocessing
 import math
 import numpy as np
 import copy

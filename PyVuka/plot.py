@@ -11,7 +11,7 @@ from matplotlib.ticker import MaxNLocator
 import matplotlib.patheffects as pe
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
-import data_obj as data
+from . import data_obj as data
 from io import BytesIO as BIO
 from PIL import Image
 import warnings

@@ -4,9 +4,9 @@
 #  PyVuka commands(import ModuleLink.toPyVuka as pyvuka) or access the PyVuka data directly
 #  (import data_obj as data).
 #-----------------------------------------------------------------------------------------
-from ModuleLink import toPyVuka as pyvuka
+from .. ModuleLink import toPyVuka as pyvuka
 import os
-import Modules as IPI
+from .. import Modules as IPI
 import xml.etree.ElementTree as xmlio
 import base64
 import pack64

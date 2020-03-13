@@ -19,7 +19,7 @@
 # The PyVuka data buffer matrix is a list of object_buffer dictionaries
 #
 #######################################################################################################################
-import commands, plot, data_obj as data
+from .. import commands, plot, data_obj as data
 from PIL import Image
 from io import BytesIO as BIO
 import os
