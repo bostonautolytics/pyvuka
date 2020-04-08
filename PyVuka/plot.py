@@ -11,7 +11,6 @@ from matplotlib.ticker import MaxNLocator
 import matplotlib.patheffects as pe
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
-from . import data_obj as data
 from io import BytesIO as BIO
 from PIL import Image
 import warnings
@@ -19,18 +18,18 @@ warnings.filterwarnings("ignore")
 
 
 class plotter(object):
-    def __init__(self):
-        directory = "c:\\"
+    def __init__(self, data_instance):
         pl.close('all')
-        print("Plotting...")
         self.__global_xlim = (-0.1, 0.1)
         self.__global_ylim = (-0.1, 0.1)
         self.__global_ylim_resid = (-0.1, 0.1)
         self.__resid_ax = False
         self.__scatter_ax = False
         self.__scatter_fig = False
+        self.inst = data_instance
 
     def __call__(self, pltarray, *args, **kwargs):
+        print("Plotting...")
         return_bytes = False
         scan = False
         auto = False
@@ -56,12 +55,12 @@ class plotter(object):
         self.__set_plotting_backend(return_bytes)
         self.__get_global_lims(pltarray)
 
-        if data.matrix.length() == 0:
+        if len(self.inst.matrix._Matrix__buffer_list) == 0:
             return "No data in matrix!"
 
         for i in range(len(pltarray)):
             buffer_number = pltarray[i]
-            buffer = data.matrix.buffer(buffer_number)
+            buffer = self.inst.matrix._Matrix__buffer_list[buffer_number-1]
 
             # determine plot type, and call correct routine
             plot_type = self.__get_plot_type(buffer)
@@ -190,7 +189,7 @@ class plotter(object):
         return pl
 
     def __scatterline(self, buffer_number, start_plot, plot_type, *args, **kwargs):
-        buffer = data.matrix.buffer(buffer_number)
+        buffer = self.inst.matrix._Matrix__buffer_list[buffer_number-1]
         black_models = False
         scan = False
 
@@ -441,23 +440,24 @@ class plotter(object):
         ymax_res = -np.inf
 
         for num in pltarray:
-            if int(num) > data.matrix.length():
+            if int(num) > len(self.inst.matrix._Matrix__buffer_list):
                 continue
-            if data.matrix.buffer(num).data.x.length() > 0:
-                if np.isfinite(data.matrix.buffer(num).data.x.min()) and data.matrix.buffer(num).data.x.min() <= xmin:
-                    xmin = data.matrix.buffer(num).data.x.min()
-                if np.isfinite(data.matrix.buffer(num).data.x.max()) and data.matrix.buffer(num).data.x.max() >= xmax:
-                    xmax = data.matrix.buffer(num).data.x.max()
-            if data.matrix.buffer(num).data.y.length() > 0:
-                if np.isfinite(data.matrix.buffer(num).data.y.min()) and data.matrix.buffer(num).data.y.min() <= ymin:
-                    ymin = data.matrix.buffer(num).data.y.min()
-                if np.isfinite(data.matrix.buffer(num).data.y.max()) and data.matrix.buffer(num).data.y.max() >= ymax:
-                    ymax = data.matrix.buffer(num).data.y.max()
-            if data.matrix.buffer(num).residuals.y.length() > 0:
-                if np.isfinite(data.matrix.buffer(num).residuals.y.min()) and data.matrix.buffer(num).residuals.y.min() <= ymin_res:
-                    ymin_res = data.matrix.buffer(num).residuals.y.min()
-                if np.isfinite(data.matrix.buffer(num).residuals.y.max()) and data.matrix.buffer(num).residuals.y.max() >= ymax_res:
-                    ymax_res = data.matrix.buffer(num).residuals.y.max()
+            buffer = self.inst.matrix._Matrix__buffer_list[num-1]
+            if self.inst.matrix.buffer(num).data.x.length() > 0:
+                if np.isfinite(buffer.data.x.min()) and buffer.data.x.min() <= xmin:
+                    xmin = buffer.data.x.min()
+                if np.isfinite(buffer.data.x.max()) and buffer.data.x.max() >= xmax:
+                    xmax = buffer.data.x.max()
+            if buffer.data.y.length() > 0:
+                if np.isfinite(buffer.data.y.min()) and buffer.data.y.min() <= ymin:
+                    ymin = buffer.data.y.min()
+                if np.isfinite(buffer.data.y.max()) and buffer.data.y.max() >= ymax:
+                    ymax = buffer.data.y.max()
+            if buffer.residuals.y.length() > 0:
+                if np.isfinite(buffer.residuals.y.min()) and buffer.residuals.y.min() <= ymin_res:
+                    ymin_res = buffer.residuals.y.min()
+                if np.isfinite(buffer.residuals.y.max()) and buffer.residuals.y.max() >= ymax_res:
+                    ymax_res = buffer.residuals.y.max()
 
         self.__global_xlim = (xmin, xmax)
         self.__global_ylim = (ymin, ymax)

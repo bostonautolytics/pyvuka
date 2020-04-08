@@ -1,6 +1,5 @@
 import numpy as np
 from lmfit import minimize, Parameters, report_fit
-from . import data_obj as data
 
 #constants
 gas_const_kcal = .0019872036
@@ -19,7 +18,7 @@ class datafit(object):
     Remaining doctstring format should be conserved as it is the description used by the 'fun info' command.
         """
 
-    def __init__(self, info_commands=['info', '?']):
+    def __init__(self, data_instance, info_commands=('info', '?')):
         self._info_cmd = info_commands
         self.paramid = []
         self.paramval = []
@@ -30,6 +29,7 @@ class datafit(object):
         self.pyscript = False
         self.tzerooffset = False
         self.pyscriptonly = False
+        self.inst = data_instance
 
     def __call__(self, args):
         if len(args) == 0:
@@ -165,6 +165,7 @@ class datafit(object):
         self.parambounds.extend([[0, np.inf], [0, np.inf], [0, np.inf], [0, np.inf], [0, np.inf], [0, np.inf],
                                  [0, np.inf], [0, np.inf], [-np.inf, np.inf], [0, np.inf], [0, np.inf]])
         self.paramdefaults.extend([1, 30, 14300, 25, 25, 2.3E6, 9.85E-11, 5E-9, 300, 0, 1.0E10])
+        self.pyscriptonly = True
         self.pyscript = compile("""
 # L1 is the distance from the inlet to the start of the detection area
 # L2 is the distance from the inlet to the end of the detection spot
@@ -207,7 +208,6 @@ for j in range(len(X)):
         # calc dissociation
         Wval = numericalmethods.lambertw(((-1 * Rz) / K6) * np.exp(-1 * ((Rz / K6) + (K5 * P[6] * (X[j] - P[8])))))
         R[j] = (-1 * K6) * Wval
-fitparams.pyscriptonly = True
 """, '<string>', 'exec')
         self.functions.extend(["Y=X+P[0]"])
         self.pyscriptonly = True
@@ -231,6 +231,7 @@ fitparams.pyscriptonly = True
             self.parambounds.extend([[0, np.inf], [0, np.inf], [0, np.inf], [0, np.inf], [-np.inf, np.inf],
                                      [-np.inf, np.inf], [-np.inf, np.inf], [-6, 6]])
             self.paramdefaults.extend([25, 0.001, 60000, 100E-9, 0, 0, 180, 1])
+            self.pyscriptonly = True
             self.pyscript = compile("""
 rm, kd, ka, cp, m, c, xo, kds = P
 if cp==0:
@@ -242,7 +243,6 @@ for j in range(len(X)):
     else:
         # calc dissociation
         R[j] = kds*(((rm/(1+(kd/(ka*cp))))*(1-np.exp(-1*xo*(ka*cp+kd)))-c))*(np.exp(-1*kd*(X[j]-xo))) + m*(X[j]-xo) + c
-fitparams.pyscriptonly = True
 """, '<string>', 'exec')
 
             self.functions.extend(["Y=(P[0]/(1+(P[1]/(P[2]*P[3]))))*(1-(np.exp((-1*X*((P[2]*P[3])+P[1])))))+(P[7]*(((P[0]/(1+(P[1]/(P[2]*P[3]))))*(1-np.exp(-1*P[6]*(P[2]*P[3]+P[1])))-P[5]))*(np.exp(-1*P[1]*(X-P[6])))+P[4]*(X-P[6])+P[5])"])
@@ -352,12 +352,12 @@ fitparams.pyscriptonly = True
         for f in self.funcindex:
             fn = getattr(self, 'fxn_' + str(f))
             fn()
-        if data.plot_limits.is_active:
-            firstindex = min(data.plot_limits.buffer_range.get())
-            lastindex = max(data.plot_limits.buffer_range.get())
+        if self.inst.data.plot_limits.is_active:
+            firstindex = min(self.inst.data.plot_limits.buffer_range.get())
+            lastindex = max(self.inst.data.plot_limits.buffer_range.get())
         else:
             firstindex = 1
-            lastindex = data.matrix.length() + 1
+            lastindex = self.inst.data.matrix.length() + 1
         maxindex = 0
         for k in range(len(fxns)):
             fxnsplit = fxns[k].split("P[")
@@ -373,241 +373,238 @@ fitparams.pyscriptonly = True
             tempfxn += xval + '+'
         try:
             for i in range(firstindex, lastindex):
-                data.matrix.buffer(i).fit.function_index.set(fxnindicies)
-                data.matrix.buffer(i).fit.function.set(tempfxn[:-1])
+                self.inst.data.matrix.buffer(i).fit.function_index.set(fxnindicies)
+                self.inst.data.matrix.buffer(i).fit.function.set(tempfxn[:-1])
         except:
             return False
         return True
 
 
-def dofit(*args):
-    ymatrix = []
-    parameters = Parameters()
-    fitparams = datafit()
-    bmax = 1
-    bmin = 1
-    p_best = []
-    longest = 0
-    debug = True
-    method = "Leastsq"
-    args = [int(val) if val.isdigit() else val.lower() for val in args]
+    def dofit(self, *args):
+        ymatrix = []
+        parameters = Parameters()
+        fitparams = datafit(self.inst)
+        bmax = 1
+        bmin = 1
+        p_best = []
+        longest = 0
+        debug = True
+        method = "Leastsq"
+        args = [int(val) if val.isdigit() else val.lower() for val in args]
 
-    if "-debug" in args:
-        iter_cb = debug_fitting
-    else:
-        iter_cb = None
-    if not data.plot_limits.is_active:
-        bmax = data.matrix.length()
-    else:
-        bmin = min(data.plot_limits.buffer_range.get())
-        bmax = max(data.plot_limits.buffer_range.get())
-    for i in range(bmin, bmax+1):
-        fitparams.update(data.matrix.buffer(i).fit.function_index.get())
-        p_init = data.matrix.buffer(i).fit.parameter.get()
+        if "-debug" in args:
+            iter_cb = self.debug_fitting
+        else:
+            iter_cb = None
+        if not self.inst.data.plot_limits.is_active:
+            bmax = self.inst.data.matrix.length()
+        else:
+            bmin = min(self.inst.data.plot_limits.buffer_range.get())
+            bmax = max(self.inst.data.plot_limits.buffer_range.get())
+        for i in range(bmin, bmax+1):
+            fitparams.update(self.inst.data.matrix.buffer(i).fit.function_index.get())
+            p_init = self.inst.data.matrix.buffer(i).fit.parameter.get()
 
-        max_iter = 2000 * (len(p_init) + 1)
-        # if int passed as arg, use as maximum iteration number, else default to lib default
-        new_max = [val for val in args if isinstance(val, int)]
-        if new_max:
-            max_iter = new_max[0]
+            max_iter = 2000 * (len(p_init) + 1)
+            # if int passed as arg, use as maximum iteration number, else default to lib default
+            new_max = [val for val in args if isinstance(val, int)]
+            if new_max:
+                max_iter = new_max[0]
 
-        if len(p_init) == 0:
-            return "Invalid Parameters!  Try Function: ap ."
-        ymatrix.append(data.matrix.buffer(i).data.y.get())
-        for j in range(len(data.matrix.buffer(i).fit.parameter.get())):
-            try:
-                parameters.add(name=fitparams.paramid[j] + "_{}_{}".format(j+1, i),
-                               value=float(data.matrix.buffer(i).fit.parameter.get()[j]),
-                               min=float(min(fitparams.parambounds[j])), max=float(max(fitparams.parambounds[j])),
-                               expr=data.matrix.buffer(i).fit.link.get()[j],
-                               vary=data.matrix.buffer(i).fit.free.get()[j])
-            except (NameError, ValueError) as e:
-                if isinstance(e, NameError):
-                    return "Parameter Linking Scheme is Invalid!"
-                elif isinstance(e, ValueError):
-                    return "Parameters Return Invalid Results!!"
-    ymatrix = np.array(ymatrix)
-    longest = max([len(y) for y in ymatrix])
-    try:
-        assert ymatrix.shape == (bmax-bmin+1, longest)
-    except AssertionError:
-        return "All Buffers Must Be the Same Number of Points!  Try Commands: pl or res or tri"
-    try:
-        result = minimize(objective, parameters, args=(ymatrix, bmin, bmax),
-                  iter_cb=iter_cb, method=method, maxfev=max_iter, nan_policy='omit')
-    except Exception as e:
+            if len(p_init) == 0:
+                return "Invalid Parameters!  Try Function: ap ."
+            ymatrix.append(self.inst.data.matrix.buffer(i).data.y.get())
+            for j in range(len(self.inst.data.matrix.buffer(i).fit.parameter.get())):
+                try:
+                    parameters.add(name=fitparams.paramid[j] + "_{}_{}".format(j+1, i),
+                                   value=float(self.inst.data.matrix.buffer(i).fit.parameter.get()[j]),
+                                   min=float(min(fitparams.parambounds[j])), max=float(max(fitparams.parambounds[j])),
+                                   expr=self.inst.data.matrix.buffer(i).fit.link.get()[j],
+                                   vary=self.inst.data.matrix.buffer(i).fit.free.get()[j])
+                except (NameError, ValueError) as e:
+                    if isinstance(e, NameError):
+                        return "Parameter Linking Scheme is Invalid!"
+                    elif isinstance(e, ValueError):
+                        return "Parameters Return Invalid Results!!"
+        ymatrix = np.array(ymatrix)
+        longest = max([len(y) for y in ymatrix])
+        try:
+            assert ymatrix.shape == (bmax-bmin+1, longest)
+        except AssertionError:
+            return "All Buffers Must Be the Same Number of Points!  Try Commands: pl or res or tri"
+        try:
+            result = minimize(self.objective, parameters, args=(ymatrix, bmin, bmax),
+                      iter_cb=iter_cb, method=method, maxfev=max_iter, nan_policy='omit')
+        except Exception as e:
+            for i in range(bmin, bmax + 1):
+                x = self.inst.data.matrix.buffer(i).data.x.get()
+                y = self.inst.data.matrix.buffer(i).data.y.get()
+                z = self.inst.data.matrix.buffer(i).data.z.get()
+                self.inst.data.matrix.buffer(i).fit.fit_failed = True
+                self.inst.data.matrix.buffer(i).fit.fit_failed_reason.set(str(e))
+                self.inst.data.matrix.buffer(i).fit.parameter.set([-1] * len(parameters))
+                self.inst.data.matrix.buffer(i).fit.parameter_error.set([-1] * len(parameters))
+                self.inst.data.matrix.buffer(i).model.x.set([x[0], x[-1]] if len(x) > 1 else [])
+                self.inst.data.matrix.buffer(i).model.y.set([y[0], y[-1]] if len(y) > 1 else [])
+                self.inst.data.matrix.buffer(i).model.z.set([z[0], z[-1]] if len(z) > 1 else [])
+            return f"\nFit Failed!\n\t{str(e)}"
+
+        self.saveparams(result)
+        report_fit(result.params)
+
+        # calculate model
         for i in range(bmin, bmax + 1):
-            x = data.matrix.buffer(i).data.x.get()
-            y = data.matrix.buffer(i).data.y.get()
-            z = data.matrix.buffer(i).data.z.get()
-            data.matrix.buffer(i).fit.fit_failed = True
-            data.matrix.buffer(i).fit.fit_failed_reason.set(str(e))
-            data.matrix.buffer(i).fit.parameter.set([-1] * len(parameters))
-            data.matrix.buffer(i).fit.parameter_error.set([-1] * len(parameters))
-            data.matrix.buffer(i).model.x.set([x[0], x[-1]] if len(x) > 1 else [])
-            data.matrix.buffer(i).model.y.set([y[0], y[-1]] if len(y) > 1 else [])
-            data.matrix.buffer(i).model.z.set([z[0], z[-1]] if len(z) > 1 else [])
-        return f"\nFit Failed!\n\t{str(e)}"
+            self.generatemodel(i, numpts=300)
 
-    saveparams(result)
-    report_fit(result.params)
-
-    # calculate model
-    for i in range(bmin, bmax + 1):
-        generatemodel(i, numpts=300)
-
-    # print number of function efvals
-    print('\n#Function efvals:\t', result.nfev)
-    #print number of data points
-    print('#Data pts:\t', result.ndata)
-    #print number of variables
-    print('#Variables:\t', result.nvarys)
-    # chi-sqr
-    print('\nResult Chi Sq:\t', result.chisqr)
-    # reduce chi-sqr
-    print('Result Reduced Chi Sq:\t', result.redchi)
-    # Akaike info crit
-    print('Result Akaike:\t', result.aic)
-    # Bayesian info crit
-    print('Result Bayesian:\t', result.bic)
-    return "\nData Fitting Complete!"
+        # print number of function efvals
+        print('\n#Function efvals:\t', result.nfev)
+        #print number of data points
+        print('#Data pts:\t', result.ndata)
+        #print number of variables
+        print('#Variables:\t', result.nvarys)
+        # chi-sqr
+        print('\nResult Chi Sq:\t', result.chisqr)
+        # reduce chi-sqr
+        print('Result Reduced Chi Sq:\t', result.redchi)
+        # Akaike info crit
+        print('Result Akaike:\t', result.aic)
+        # Bayesian info crit
+        print('Result Bayesian:\t', result.bic)
+        return "\nData Fitting Complete!"
 
 
-def debug_fitting(params, nfev, resid, *args, **kwargs):
-    """Function to be called after each iteration of the minimization method
-    used by lmfit. Should reveal information about how parameter values are
-    changing after every iteration in the fitting routine. See
-    lmfit.Minimizer.__residual for more information."""
-    print("Iteration {0}".format(nfev) + "\tRsq: " + str(np.sum(np.power(resid, 2))))
+    def debug_fitting(self, params, nfev, resid, *args, **kwargs):
+        """Function to be called after each iteration of the minimization method
+        used by lmfit. Should reveal information about how parameter values are
+        changing after every iteration in the fitting routine. See
+        lmfit.Minimizer.__residual for more information."""
+        print("Iteration {0}".format(nfev) + "\tRsq: " + str(np.sum(np.power(resid, 2))))
 
 
-def objective(params, ymatrix, bmin, bmax):  # calculate residuals to determine if the parameters are improving the fit
-    resid = 0.0 * ymatrix[:]
-    for i in range(bmin, bmax + 1):
-        P = []
-        fitparams = datafit()
-        fitparams.update(data.matrix.buffer(i).fit.function_index.get())
-        X = data.matrix.buffer(i).data.x.get()
-        Y = data.matrix.buffer(i).data.y.get()
-        Z = data.matrix.buffer(i).data.z.get()
-        IRX = data.matrix.buffer(i).instrument_response.x.get()
-        IRY = data.matrix.buffer(i).instrument_response.y.get()
-        IRZ = data.matrix.buffer(i).instrument_response.z.get()
-        weights = data.matrix.buffer(i).data.ye.get()
+    def objective(self, params, ymatrix, bmin, bmax):  # calculate residuals to determine if the parameters are improving the fit
+        resid = 0.0 * ymatrix[:]
+        for i in range(bmin, bmax + 1):
+            P = []
+            self.update(self.inst.data.matrix.buffer(i).fit.function_index.get())
+            X = self.inst.data.matrix.buffer(i).data.x.get()
+            Y = self.inst.data.matrix.buffer(i).data.y.get()
+            Z = self.inst.data.matrix.buffer(i).data.z.get()
+            IRX = self.inst.data.matrix.buffer(i).instrument_response.x.get()
+            IRY = self.inst.data.matrix.buffer(i).instrument_response.y.get()
+            IRZ = self.inst.data.matrix.buffer(i).instrument_response.z.get()
+            weights = self.inst.data.matrix.buffer(i).data.ye.get()
 
-        # Fit the data
-        fxn = data.matrix.buffer(i).fit.function.get()
+            # Fit the data
+            fxn = self.inst.data.matrix.buffer(i).fit.function.get()
+            R = [0] * len(X)
+            for j in range(len(self.inst.data.matrix.buffer(i).fit.parameter.get())):
+                pname = self.paramid[j].replace('-', '') + "_{}_{}".format(j+1, i)
+                P.append(params[pname].value)
+            if fxn is not False and fxn[:2].upper() == "Y=":
+                fxn = fxn[2:]
+            # execute custom script
+            if self.pyscript:
+                exec(self.pyscript)
+            else:
+                R = eval(str(fxn))
+
+            self.inst.data.matrix.buffer(i).fit.parameter.set(P)
+            R = np.array(R)
+
+            self.inst.data.matrix.buffer(i).residuals.y.set(Y - R)
+            self.inst.data.matrix.buffer(i).residuals.x.set(X)
+            resid_line = self.inst.data.matrix.buffer(i).residuals.y.get()
+            if len(weights) > 1:
+                # apply weights
+                resid_line = (Y - R) * weights
+            resid[i - bmin, :] = np.power(resid_line, 2)
+            self.calcfitstat(i)
+        # now flatten this to a 1D array, as minimize() needs
+        return resid.flatten()
+
+
+    def generatemodel(self, i, numpts=300):
+        self.update(self.inst.data.matrix.buffer(i).fit.function_index.get())
+        X = self.inst.data.matrix.buffer(i).data.x.get()
+        Y = self.inst.data.matrix.buffer(i).data.y.get()
+        Z = self.inst.data.matrix.buffer(i).data.z.get()
+        IRX = self.inst.data.matrix.buffer(i).instrument_response.x.get()
+        IRY = self.inst.data.matrix.buffer(i).instrument_response.y.get()
+        IRZ = self.inst.data.matrix.buffer(i).instrument_response.z.get()
+
+        min_x = np.min(X)
+        max_x = np.max(X)
+        stepsize = (max_x - min_x) / (numpts)
+        modelX = [((stepsize * k) + min_x) for k in range(0, numpts, 1)]
+
+        # add some points in-case data is logarithmically sampled 11/08/2019
+        inc_x = list(zip(['inc'] * len(modelX), modelX))
+        data_x = list(zip(['data'] * len(X), X))
+        inc_x.extend(data_x)
+        all_x = sorted(inc_x, key=lambda tup: tup[1])
+        for j in reversed(range(1, len(all_x) - 1, 1)):
+            if all_x[j][0] == 'data' and all_x[j - 1][0] == 'inc' and all_x[j + 1][0] == 'inc':
+                del all_x[j]
+        _, X = map(list, zip(*all_x))
+        # end add points
+
+        fxn = self.inst.data.matrix.buffer(i).fit.function.get()
+        P = self.inst.data.matrix.buffer(i).fit.parameter.get()
+        X = np.array(X)
         R = [0] * len(X)
-        for j in range(len(data.matrix.buffer(i).fit.parameter.get())):
-            pname = fitparams.paramid[j].replace('-', '') + "_{}_{}".format(j+1, i)
-            P.append(params[pname].value)
+
         if fxn is not False and fxn[:2].upper() == "Y=":
             fxn = fxn[2:]
         # execute custom script
-        if fitparams.pyscript:
-            exec(fitparams.pyscript)
+        if self.pyscript:
+            exec(self.pyscript)
         else:
             R = eval(str(fxn))
 
-        data.matrix.buffer(i).fit.parameter.set(P)
-        R = np.array(R)
-
-        data.matrix.buffer(i).residuals.y.set(Y - R)
-        data.matrix.buffer(i).residuals.x.set(X)
-        resid_line = data.matrix.buffer(i).residuals.y.get()
-        if len(weights) > 1:
-            # apply weights
-            resid_line = (Y - R) * weights
-        resid[i - bmin, :] = np.power(resid_line, 2)
-        calcfitstat(i)
-    # now flatten this to a 1D array, as minimize() needs
-    return resid.flatten()
+        self.inst.data.matrix.buffer(i).model.x.set(X)
+        self.inst.data.matrix.buffer(i).model.y.set(R)
+        return True
 
 
-def generatemodel(i, numpts=300):
-    fitparams = datafit()
-    fitparams.update(data.matrix.buffer(i).fit.function_index.get())
-    X = data.matrix.buffer(i).data.x.get()
-    Y = data.matrix.buffer(i).data.y.get()
-    Z = data.matrix.buffer(i).data.z.get()
-    IRX = data.matrix.buffer(i).instrument_response.x.get()
-    IRY = data.matrix.buffer(i).instrument_response.y.get()
-    IRZ = data.matrix.buffer(i).instrument_response.z.get()
-
-    min_x = np.min(X)
-    max_x = np.max(X)
-    stepsize = (max_x - min_x) / (numpts)
-    modelX = [((stepsize * k) + min_x) for k in range(0, numpts, 1)]
-
-    # add some points in-case data is logarithmically sampled 11/08/2019
-    inc_x = list(zip(['inc'] * len(modelX), modelX))
-    data_x = list(zip(['data'] * len(X), X))
-    inc_x.extend(data_x)
-    all_x = sorted(inc_x, key=lambda tup: tup[1])
-    for j in reversed(range(1, len(all_x) - 1, 1)):
-        if all_x[j][0] == 'data' and all_x[j - 1][0] == 'inc' and all_x[j + 1][0] == 'inc':
-            del all_x[j]
-    _, X = map(list, zip(*all_x))
-    # end add points
-
-    fxn = data.matrix.buffer(i).fit.function.get()
-    P = data.matrix.buffer(i).fit.parameter.get()
-    X = np.array(X)
-    R = [0] * len(X)
-
-    if fxn is not False and fxn[:2].upper() == "Y=":
-        fxn = fxn[2:]
-    # execute custom script
-    if fitparams.pyscript:
-        exec(fitparams.pyscript)
-    else:
-        R = eval(str(fxn))
-
-    data.matrix.buffer(i).model.x.set(X)
-    data.matrix.buffer(i).model.y.set(R)
-    return True
+    def calcfitstat(self, i):
+        rawy = self.inst.data.matrix.buffer(i).data.y.get()
+        resid_y = self.inst.data.matrix.buffer(i).residuals.y.get()
+        rsq = np.sum(np.power(resid_y, 2))
+        avgerror = np.sum(np.power(rawy - np.average(rawy), 2))
+        self.inst.data.matrix.buffer(i).fit.rsq.set(1 - (rsq / avgerror))
+        SD = np.average(np.abs(resid_y))
+        if SD == 0:
+            SD = 0.001
+        self.inst.data.matrix.buffer(i).fit.chisq.set(np.sum(((resid_y) ** 2) / SD))
+        return
 
 
-def calcfitstat(i):
-    rawy = data.matrix.buffer(i).data.y.get()
-    resid_y = data.matrix.buffer(i).residuals.y.get()
-    rsq = np.sum(np.power(resid_y, 2))
-    avgerror = np.sum(np.power(rawy - np.average(rawy), 2))
-    data.matrix.buffer(i).fit.rsq.set(1 - (rsq / avgerror))
-    SD = np.average(np.abs(resid_y))
-    if SD == 0:
-        SD = 0.001
-    data.matrix.buffer(i).fit.chisq.set(np.sum(((resid_y) ** 2) / SD))
-    return
+    def saveparams(self, result):
+        parameters = Parameters()
+        bmin = 1
+        if not self.inst.data.plot_limits.is_active:
+            bmax = self.inst.data.matrix.length()
+        else:
+            bmin = self.inst.data.plot_limits.buffer_range.min()
+            bmax = self.inst.data.plot_limits.buffer_range.max()
+        for i in range(bmin, bmax+1):
+            self.clear()
+            self.update(self.inst.data.matrix.buffer(i).fit.function_index.get())
+            self.inst.data.matrix.buffer(i).fit.parameter_error.set([0] * len(self.inst.data.matrix.buffer(i).fit.parameter.get()))
 
+            for j in range(len(self.paramid)):
+                param = result.params[self.paramid[j] + f"_{j+1}_{i}"].value
+                error = result.params[self.paramid[j] + f"_{j+1}_{i}"].stderr
+                temp = self.inst.data.matrix.buffer(i).fit.parameter.get()
+                temp[j] = param
+                self.inst.data.matrix.buffer(i).fit.parameter.set(temp)
+                temp = self.inst.data.matrix.buffer(i).fit.parameter_error.get()
+                temp[j] = error
+                self.inst.data.matrix.buffer(i).fit.parameter_error.set(temp)
+                print("Buffer " + str(i) + " Parameter " + str(j+1) + " = " + str(param) + " +/- " + str(error))
 
-def saveparams(result):
-    parameters = Parameters()
-    fitparams = datafit()
-    bmin = 1
-    if not data.plot_limits.is_active:
-        bmax = data.matrix.length()
-    else:
-        bmin = data.plot_limits.buffer_range.min()
-        bmax = data.plot_limits.buffer_range.max()
-    for i in range(bmin, bmax+1):
-        fitparams.clear()
-        fitparams.update(data.matrix.buffer(i).fit.function_index.get())
-        data.matrix.buffer(i).fit.parameter_error.set([0] * len(data.matrix.buffer(i).fit.parameter.get()))
-
-        for j in range(len(fitparams.paramid)):
-            param = result.params[fitparams.paramid[j] + f"_{j+1}_{i}"].value
-            error = result.params[fitparams.paramid[j] + f"_{j+1}_{i}"].stderr
-            temp = data.matrix.buffer(i).fit.parameter.get()
-            temp[j] = param
-            data.matrix.buffer(i).fit.parameter.set(temp)
-            temp = data.matrix.buffer(i).fit.parameter_error.get()
-            temp[j] = error
-            data.matrix.buffer(i).fit.parameter_error.set(temp)
-            print("Buffer " + str(i) + " Parameter " + str(j+1) + " = " + str(param) + " +/- " + str(error))
-
-    for i in range(bmin, bmax+1):
-        for j in range(len(data.matrix.buffer(i).fit.parameter.get())):
-            print(f"Buffer {i} Parameter {j+1} = {str(data.matrix.buffer(i).fit.parameter.get()[j])}" +
-                  f" +/- {str(data.matrix.buffer(i).fit.parameter_error.get()[j])}")
-    return True
+        for i in range(bmin, bmax+1):
+            for j in range(len(self.inst.data.matrix.buffer(i).fit.parameter.get())):
+                print(f"Buffer {i} Parameter {j+1} = {str(self.inst.data.matrix.buffer(i).fit.parameter.get()[j])}" +
+                      f" +/- {str(self.inst.data.matrix.buffer(i).fit.parameter_error.get()[j])}")
+        return True

@@ -12,16 +12,16 @@ pip install PyVuka
 
 #### Code
 ```python
-import PyVuka.ModuleLink.toPyVuka as pvk  # use PyVuka code base as a library
+import PyVuka.ModuleLink.toPyVuka as pyvuka  # use PyVuka code base as a library
 
-pvk.initialize_instance()  # initialize pyvuka
+pvk = pyvuka.initialize_instance()  # initialize pyvuka
 buffer = pvk.new_buffer()  # create new data buffer
 buffer.data.x.set([0,1,2,3,4,5,6,7,8,9])  # populate x and y data vectors
 buffer.data.y.set([0,0.5,1.75,3.5,4,4.85,6.2,7.1,7.9,9.3])
 buffer.plot.axis.x.title.set("random int")  # add axes titles
 buffer.plot.axis.y.title.set("random float")
 pvk.add_buffer_to_datamatrix(buffer)  # add buffer to data matrix
-pvk.run_pyvuka_command('fun 27 0')  # select function 27 (Y=mx+b)
+pvk.run_pyvuka_command('fun 27 0')  # select function 27 (Y=mx+b) ; in app mode type 'fun' to see list of available functions
 pvk.run_pyvuka_command('ap 1 1 1 1')  # alter parameters of function 27. "For buffer 1 through buffer 1, slope guess = 1, y-intercept guess = 1"
 pvk.run_pyvuka_command('fit')  # fit all data in matrix with function 27
 pvk.show_plot(1) # Show plot of buffer 1 on screen and save to drive

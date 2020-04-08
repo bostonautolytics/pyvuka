@@ -5,18 +5,18 @@ import os
 import json
 
 
-global matrix
-global plot_limits
-global directories
+class init():
+    def __init__(self):
+        self.__data = Data()
+        self.matrix = self.__data.matrix
+        self.plot_limits = self.__data.plot_limits
+        self.directories = Directories()
 
+    def new_buffer(self):
+        return Buffer()
 
-def init():
-    global matrix
-    matrix = Data().matrix
-    global plot_limits
-    plot_limits = Data().plot_limits
-    global directories
-    directories = Directories()
+    def new_matrix(self):
+        return Data().matrix
 
 
 class _SharedDCO(object):
@@ -78,7 +78,7 @@ class _SharedDCO(object):
 class Data(object):
     def __init__(self):
         self.matrix = self.__Matrix()
-        self.plot_limits = self._PlotLimits()
+        self.plot_limits = self._PlotLimits(self.matrix)
 
     class __Matrix(object):
         def __init__(self):
@@ -159,13 +159,14 @@ class Data(object):
                 raise ValueError(f"Expecting PyVuka buffer objects, recieved: {type(input_object)}")
 
     class _PlotLimits(object):
-        def __init__(self):
+        def __init__(self, matrix_instance):
             self.buffer_range = self._BufferRange()
             self.x_range = self._XYZRange()
             self.y_range = self._XYZRange()
             self.z_range = self._XYZRange()
             self.__matrix_save = None
             self.is_active = False
+            self.matrix = matrix_instance
 
         def on(self):
             if self.is_active:
@@ -175,21 +176,21 @@ class Data(object):
             if len(self.buffer_range.get()) > 0:
                 firstbuffer, lastbuffer = [min(self.buffer_range.get()), max(self.buffer_range.get())]
             else:
-                firstbuffer, lastbuffer = [1, matrix.length()]
+                firstbuffer, lastbuffer = [1, self.matrix.length()]
             for i in range(firstbuffer, lastbuffer + 1):
-                matrix.set_buffer_by_number(self.apply_to_buffer(matrix.buffer(i)), i)
+                self.matrix.set_buffer_by_number(self.apply_to_buffer(self.matrix.buffer(i), self), i)
             self.is_active = True
 
         def __copy_matrix_data(self):
             save_list = []
-            for i in range(1, len(matrix) + 1):
+            for i in range(1, len(self.matrix) + 1):
                 save_dict = {}
-                save_dict['x'] = list(matrix.buffer(i).data.x.get().astype(float))
-                save_dict['xe'] = list(matrix.buffer(i).data.xe.get().astype(float))
-                save_dict['y'] = list(matrix.buffer(i).data.y.get().astype(float))
-                save_dict['ye'] = list(matrix.buffer(i).data.ye.get().astype(float))
-                save_dict['z'] = list(matrix.buffer(i).data.z.get().astype(float))
-                save_dict['ze'] = list(matrix.buffer(i).data.ze.get().astype(float))
+                save_dict['x'] = list(self.matrix.buffer(i).data.x.get().astype(float))
+                save_dict['xe'] = list(self.matrix.buffer(i).data.xe.get().astype(float))
+                save_dict['y'] = list(self.matrix.buffer(i).data.y.get().astype(float))
+                save_dict['ye'] = list(self.matrix.buffer(i).data.ye.get().astype(float))
+                save_dict['z'] = list(self.matrix.buffer(i).data.z.get().astype(float))
+                save_dict['ze'] = list(self.matrix.buffer(i).data.ze.get().astype(float))
                 save_list.append(save_dict)
             return json.loads(json.dumps(save_list))
 
@@ -198,18 +199,17 @@ class Data(object):
                 return
             for i in range(1, len(self.__matrix_save) + 1):
                 if i in range(min(self.buffer_range.get()), max(self.buffer_range.get()) + 1):
-                    matrix.buffer(i).data.x.set(self.__matrix_save[i-1]['x'])
-                    matrix.buffer(i).data.xe.set(self.__matrix_save[i-1]['xe'])
-                    matrix.buffer(i).data.y.set(self.__matrix_save[i-1]['y'])
-                    matrix.buffer(i).data.ye.set(self.__matrix_save[i-1]['ye'])
-                    matrix.buffer(i).data.z.set(self.__matrix_save[i-1]['z'])
-                    matrix.buffer(i).data.ze.set(self.__matrix_save[i-1]['ze'])
+                    self.matrix.buffer(i).data.x.set(self.__matrix_save[i-1]['x'])
+                    self.matrix.buffer(i).data.xe.set(self.__matrix_save[i-1]['xe'])
+                    self.matrix.buffer(i).data.y.set(self.__matrix_save[i-1]['y'])
+                    self.matrix.buffer(i).data.ye.set(self.__matrix_save[i-1]['ye'])
+                    self.matrix.buffer(i).data.z.set(self.__matrix_save[i-1]['z'])
+                    self.matrix.buffer(i).data.ze.set(self.__matrix_save[i-1]['ze'])
             self.is_active = False
             self.__matrix_save = None
 
         @staticmethod
-        def apply_to_buffer(buffer_object):
-            global plot_limits
+        def apply_to_buffer(buffer_object, plot_limits):
             new_buffer = buffer_object # removed copy.deepcopy
             x = new_buffer.data.x.get()
             xe = new_buffer.data.xe.get()
@@ -600,10 +600,12 @@ class Buffer(object):
                 def __init__(self):
                     self.__color_val = 'r'
 
-                def set(self, color: str):
-                    self.__color_val = str(color)
+                def set(self, color):
+                    self.__color_val = color
 
-                def get(self) -> str:
+                def get(self):
+                    if str(self.__color_val)[1] == '(' and str(self.__color_val)[-1] == ')':
+                        return tuple(self.__color_val)
                     return self.__color_val
 
             class _base_type(object):

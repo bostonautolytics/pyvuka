@@ -28,21 +28,21 @@ import os
 def initialize_instance():
     return new_instance()
 
+
 class new_instance:
     def __init__(self):
-        self.data = data
-        self.data.init()
-        self.plot = plot
+        self.data = data.init()
+        self.plot = plot.plotter(self.data)
         self.commands = commands
 
     def clear_all(self):
         self.data = data.init()
 
     def new_datamatrix(self):
-        return self.data.Data().matrix
+        return self.data.new_matrix()
 
     def new_buffer(self):
-        return self.data.Buffer()
+        return self.data.new_buffer()
 
     def get_datamatrix(self):
         return self.data.matrix
@@ -54,20 +54,20 @@ class new_instance:
     def write_buffer_at_buffer_number(self, buffer, buffer_number):
         if not 1 <= buffer_number <= self.data.matrix.length():
             raise ValueError('Supplied matrix index is invalid!')
-        if isinstance(buffer, type(self.data.Buffer())):
+        if isinstance(buffer, type(self.new_buffer())):
             self.data.matrix.set_buffer_by_number(buffer, buffer_number)
             return self.data.matrix
         raise TypeError('Supplied buffer object is not a valid instance of a PyVuka DataMatrix Data Buffer!')
 
     def set_datamatrix(self, input_datamatrix):
         if isinstance(input_datamatrix, type(self.data.matrix)) and \
-                input_datamatrix.length() > 0 and isinstance(input_datamatrix.buffer(1), type(self.data.Buffer())):
+                input_datamatrix.length() > 0 and isinstance(input_datamatrix.buffer(1), type(self.new_buffer())):
             self.data.matrix.set(input_datamatrix.get())
             return self.data.matrix
         raise TypeError('Invalid PyVuka datamatrix Object!')
 
     def add_buffer_to_datamatrix(self, buffer):
-        if isinstance(buffer, type(self.data.Buffer())):
+        if isinstance(buffer, type(self.new_buffer())):
             self.data.matrix.add_buffer(buffer)
             return self.data.matrix
         raise TypeError('Supplied buffer object is not a valid instance of a PyVuka DataMatrix Data Buffer!')
@@ -80,10 +80,10 @@ class new_instance:
             raise IndexError(f'Invalid buffer index:\n\t{str(e)}')
 
     def get_plot_limit_params(self):
-        self.buffer_range = self._BufferRange()
-        self.x_range = self._XYZRange()
-        self.y_range = self._XYZRange()
-        self.z_range = self._XYZRange()
+        self.buffer_range = self.data.plot_limits._BufferRange()
+        self.x_range = self.data.plot_limits._XYZRange()
+        self.y_range = self.data.plot_limits._XYZRange()
+        self.z_range = self.data.plot_limits._XYZRange()
         self.__matrix_save = None
         self.is_active = False
         return {'buffer_range': self.data.plot_limits.buffer_range.get(),
@@ -127,7 +127,7 @@ class new_instance:
     def set_output_directory(self, output_directory_full_path):
         if os.path.exists(output_directory_full_path) or os.access(os.path.dirname(output_directory_full_path), os.W_OK):
             self.data.directories.output.set(output_directory_full_path)
-            return data.directories.output.get()
+            return self.data.directories.output.get()
         raise TypeError('Invalid PyVuka System Variables Object!')
 
     def show_plot(self, list_of_datamatrix_idicies, *args, **kwargs):
@@ -152,11 +152,10 @@ class new_instance:
             except:
                 pass
 
-        img = self.plot.plotter()
-        try:
-            return img(list_of_datamatrix_idicies, get_bytes=False, dpi=dpi, tight=tight, black_models=black_models)
-        except Exception as e:
-            raise Exception(f'Could not generate plot:\n\t{str(e)}')
+        #try:
+        return self.plot(list_of_datamatrix_idicies, get_bytes=False, dpi=dpi, tight=tight, black_models=black_models)
+        #except Exception as e:
+        #    raise Exception(f'Could not generate plot:\n\t{str(e)}')
 
     def get_plot_as_bytestring(self, list_of_datamatrix_idicies, *args, **kwargs):
         list_of_datamatrix_idicies = self.__single_int_to_list(list_of_datamatrix_idicies)
@@ -180,13 +179,14 @@ class new_instance:
             except:
                 pass
 
-        img = self.plot.plotter()
+        img = plot.plotter(self.data)
         try:
             return BIO(img(list_of_datamatrix_idicies, get_bytes=True, dpi=dpi, tight=tight, black_models=black_models))
         except Exception as e:
             raise Exception(f'Could not generate plot:\n\t{str(e)}')
 
-    def __single_int_to_list(self, list_of_datamatrix_idicies):
+    @staticmethod
+    def __single_int_to_list(list_of_datamatrix_idicies):
         if isinstance(list_of_datamatrix_idicies, int):
             return [list_of_datamatrix_idicies]
         elif isinstance(list_of_datamatrix_idicies, list):
@@ -214,7 +214,7 @@ class new_instance:
         if not isinstance(native_pyvuka_command, str):
             raise ValueError(f'PyVuka command is not a valid string object!')
         try:
-            commander = self.commands.Command()
+            commander = commands.Command(self)
             return commander(native_pyvuka_command)
         except Exception as e:
             raise ValueError(f'Invalid PyVuka command!\n\t{str(e)}')

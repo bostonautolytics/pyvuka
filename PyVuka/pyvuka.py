@@ -8,8 +8,7 @@
 #==============================================================================
 import sys
 import os
-from PyVuka import commands as commands
-from . import data_obj as data
+from .ModuleLink import toPyVuka as pyvuka
 
 __author__ = "R. Paul Nobrega"
 __app_name__ = "PyVuka"
@@ -17,7 +16,7 @@ __description__ = "A General Purpose Global Data Analysis Package"
 __copyright__ = "Copyright 2017, www.BostonAutoLytics.com"
 __credits__ = "R. Paul Nobrega, Osman Bilsel, & David G. Lambright"
 __license__ = "GPL"
-__version__ = "0.0.15"
+__version__ = "0.0.16"
 __maintainer__ = "R. Paul Nobrega"
 __email__ = "Paul@BostonAutoLytics.com"
 __status__ = "Development"
@@ -41,25 +40,24 @@ def homescreen():
 def start():
     homescreen()
     exitflag = False
-    commander = commands.Command()
+    pvk = pyvuka.initialize_instance()
     workingdir = os.getcwd()
-    data.init()
-    data.directories.working.set(workingdir)
-    print("Current Working Directory: %s\n" % data.directories.working.get())
+    pvk.data.directories.working.set(workingdir)
+    print("Current Working Directory: %s\n" % pvk.data.directories.working.get())
     if len(sys.argv[1:]) >= 1:
         if os.path.exists(sys.argv[1]):
-            commander("cwd -set "+str(sys.argv[1]))
+            pvk.run_pyvuka_command("cwd -set "+str(sys.argv[1]))
             initargs = " ".join(map(str, sys.argv[2:])).split(';')
         else:
             initargs = " ".join(map(str, sys.argv[1:])).split(';')
         for initarg in initargs:
             print("PyVuka> " + initarg)
-            print(commander(initarg))
+            print(pvk.run_pyvuka_command(initarg))
     while not exitflag:
         userinput = input("\nPyVuka> ")
         userinput = userinput.split(';')
         for command in userinput:
-            output = commander(command)
+            output = pvk.run_pyvuka_command(command)
             if output == '':
                 continue
             elif not output:

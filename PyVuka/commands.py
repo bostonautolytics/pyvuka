@@ -1,6 +1,6 @@
 import sys
 import os.path
-from . import data_obj as data, plot, fitfxns, fileio, Modules, commands, numericalmethods, inputprocessing
+from . import plot, fitfxns, fileio, Modules, numericalmethods, inputprocessing
 import math
 import numpy as np
 import copy
@@ -9,9 +9,11 @@ import copy
 class Command(object):
     """extend with do_something  method to handle your commands"""
 
-    def __init__(self, quit_commands=['q', 'quit', 'exit'], help_commands=['help', '?', 'h']):
+    def __init__(self, data_instance, quit_commands=('q', 'quit', 'exit'), help_commands=('help', '?', 'h')):
         self._quit_cmd = quit_commands
         self._help_cmd = help_commands
+        self.inst = data_instance
+        self.fitter = fitfxns.datafit(data_instance)
 
     def __call__(self, line):
         if line is None or line == '':
@@ -22,7 +24,7 @@ class Command(object):
             return False
         elif cmd in self._help_cmd:
             return self.help(args[0] if args else None)
-        elif cmd not in safe_commands and data.matrix.get() == []:
+        elif cmd not in safe_commands and self.inst.data.matrix.get() == []:
             return "\n No Data In Memory! Read data with command: rea ."
         elif hasattr(self, 'do_' + cmd):
             return getattr(self, 'do_' + cmd)(*args)
@@ -66,8 +68,7 @@ class Command(object):
             args = tokens[1:]
         return cmd, args
 
-
-    def do_pl(selfself, *args):
+    def do_pl(self, *args):
         """\nCommand: Plot Limits\n
         Description: Specifies global x range of data to be used for drawing, fitting, writing, and manipulating data.
 
@@ -86,28 +87,28 @@ class Command(object):
         """
 
         inparse = inputprocessing.InputParser()
-        lastbuffer = data.matrix.length()
+        lastbuffer = self.inst.data.matrix.length()
         shortestxdata = 0
-        if data.matrix.length() == 0:
+        if self.inst.data.matrix.length() == 0:
             return "No Data in Matrix!"
-        if ((len(args) == 1 and args[0].lower() in ['on','-v']) or len(args) == 0) and data.plot_limits.is_active:
+        if ((len(args) == 1 and args[0].lower() in ['on','-v']) or len(args) == 0) and self.inst.data.plot_limits.is_active:
             return "Plot Limits Are Already Active"
-        elif len(args) == 1 and args[0].lower() == 'off' and not data.plot_limits.is_active:
+        elif len(args) == 1 and args[0].lower() == 'off' and not self.inst.data.plot_limits.is_active:
             return "Plot Limits Are Already Inactive"
-        if (len(args) > 0 and args[0].lower() == 'off') and data.plot_limits.is_active:
-            data.plot_limits.off()
+        if (len(args) > 0 and args[0].lower() == 'off') and self.inst.data.plot_limits.is_active:
+            self.inst.data.plot_limits.off()
             return "Plot Limits Off!"
 
-        min_x_val = min([data.matrix.buffer(i).data.x.min() for i in range(1, data.matrix.length() + 1)])
-        max_x_val = max([data.matrix.buffer(i).data.x.max() for i in range(1, data.matrix.length() + 1)])
+        min_x_val = min([self.inst.data.matrix.buffer(i).data.x.min() for i in range(1, self.inst.data.matrix.length() + 1)])
+        max_x_val = max([self.inst.data.matrix.buffer(i).data.x.max() for i in range(1, self.inst.data.matrix.length() + 1)])
 
         if "-v" in args:
             inparse.prompt = ["First Buffer", "Last Buffer", "Min x Val", "Max x Val"]
             inparse.inputbounds = [[1, lastbuffer], [1, lastbuffer], [-1E100, 1E100], [-1E100, 1E100]]
             inparse.defaultinput = ['1', str(lastbuffer), str(min_x_val), str(max_x_val)]
         else:
-            min_idx = data.matrix.buffer(1).data.x.nearest_index_to_value(min_x_val) + 1
-            max_idx = data.matrix.buffer(1).data.x.nearest_index_to_value(max_x_val) + 1
+            min_idx = self.inst.data.matrix.buffer(1).data.x.nearest_index_to_value(min_x_val) + 1
+            max_idx = self.inst.data.matrix.buffer(1).data.x.nearest_index_to_value(max_x_val) + 1
             inparse.prompt = ["First Buffer", "Last Buffer", "First Point", "Last Point"]
             inparse.inputbounds = [[1, lastbuffer], [1, lastbuffer],
                                    [1, min_idx],
@@ -118,28 +119,28 @@ class Command(object):
         else:
             if not inparse.getparams():
                 return "\nNo changes Have Been Made to Plot Limits!"
-            if 'on' or '-on' in inparse.modifiers and not data.plot_limits.is_active:
+            if 'on' or '-on' in inparse.modifiers and not self.inst.data.plot_limits.is_active:
                 brange = sorted([int(inparse.userinput[0]), int(inparse.userinput[1])])
-                data.plot_limits.buffer_range.set(brange)
+                self.inst.data.plot_limits.buffer_range.set(brange)
                 minindex = []
                 maxindex = []
                 if '-v' in inparse.cmdflags:
                     min_x = float(inparse.userinput[2])
                     max_x = float(inparse.userinput[3])
                     for i in range(min(brange), max(brange) + 1):
-                        minindex.append(data.matrix.buffer(i).data.x.nearest_index_to_value(min_x))
-                        maxindex.append(data.matrix.buffer(i).data.x.nearest_index_to_value(max_x))
-                    data.plot_limits.x_range.set([min(minindex) + 1, min(maxindex) + 1])
+                        minindex.append(self.inst.data.matrix.buffer(i).data.x.nearest_index_to_value(min_x))
+                        maxindex.append(self.inst.data.matrix.buffer(i).data.x.nearest_index_to_value(max_x))
+                    self.inst.data.plot_limits.x_range.set([min(minindex) + 1, min(maxindex) + 1])
                 else:
                     pointnummin=int(inparse.userinput[2])
                     pointnummax=int(inparse.userinput[3])
-                    data.plot_limits.x_range.set([pointnummin, pointnummax])
-                data.plot_limits.on()
+                    self.inst.data.plot_limits.x_range.set([pointnummin, pointnummax])
+                self.inst.data.plot_limits.on()
 
-        if not data.plot_limits.is_active and 'off' or '-off' in inparse.modifiers:
-            data.plot_limits.off()
+        if not self.inst.data.plot_limits.is_active and 'off' or '-off' in inparse.modifiers:
+            self.inst.data.plot_limits.off()
             return "Plot Limits Off!"
-        elif data.plot_limits.is_active == True:
+        elif self.inst.data.plot_limits.is_active == True:
             return "Plot Limits On!"
         else:
             return "Error Configuring Plot Limits!"
@@ -188,9 +189,9 @@ class Command(object):
 
         if "-cwd" in userflags:
             if not inparse.modifiers:
-                inparse.modifiers = [data.directories.working.get()]
+                inparse.modifiers = [self.inst.data.directories.working.get()]
             else:
-                inparse.modifiers[0] = data.directories.working.get()
+                inparse.modifiers[0] = self.inst.data.directories.working.get()
 
         if len(inparse.modifiers) == 0:
             return "No input file specified!"
@@ -209,67 +210,68 @@ class Command(object):
         if len(userflags) == 1:
             userflags.append("-xy")
         try:
+            fio = fileio.IO(self.inst)
             if "-txt" in userflags:
                 if "-y" in userflags:
-                    return fileio.readtxt(filetoread, "-y", comparams)
+                    return fio.readtxt(filetoread, "-y", comparams)
                 elif "-xy" in userflags:
-                    return fileio.readtxt(filetoread, "-xy", comparams)
+                    return fio.readtxt(filetoread, "-xy", comparams)
                 elif "-xyz" in userflags:
-                    return fileio.readtxt(filetoread, "-xyz", comparams)
+                    return fio.readtxt(filetoread, "-xyz", comparams)
                 elif "-ye" in userflags:
-                    return fileio.readtxt(filetoread, "-ye", comparams)
+                    return fio.readtxt(filetoread, "-ye", comparams)
                 elif "-xye" in userflags:
-                    return fileio.readtxt(filetoread, "-xye", comparams)
+                    return fio.readtxt(filetoread, "-xye", comparams)
                 elif "-xeye" in userflags:
-                    return fileio.readtxt(filetoread, "-xeye", comparams)
+                    return fio.readtxt(filetoread, "-xeye", comparams)
                 elif "-xeyeze" in userflags:
-                    return fileio.readtxt(filetoread, "-xeyeze", comparams)
+                    return fio.readtxt(filetoread, "-xeyeze", comparams)
                 elif "-cye" in userflags:
-                    return fileio.readtxt(filetoread, "-cye", comparams)
+                    return fio.readtxt(filetoread, "-cye", comparams)
                 elif "-cyz" in userflags:
-                    return fileio.readtxt(filetoread, "-cyz", comparams)
+                    return fio.readtxt(filetoread, "-cyz", comparams)
                 elif "-ccz" in userflags:
-                    return fileio.readtxt(filetoread, "-ccz", comparams)
+                    return fio.readtxt(filetoread, "-ccz", comparams)
                 else:
                     return "No txt file structure given."
             elif "-xlsx" in userflags:
                 if "-y" in userflags:
-                    return fileio.readxlsx(filetoread, "-y", comparams)
+                    return fio.readxlsx(filetoread, "-y", comparams)
                 elif "-xy" in userflags:
-                    return fileio.readxlsx(filetoread, "-xy", comparams)
+                    return fio.readxlsx(filetoread, "-xy", comparams)
                 elif "-xyz" in userflags:
-                    return fileio.readxlsx(filetoread, "-xyz", comparams)
+                    return fio.readxlsx(filetoread, "-xyz", comparams)
                 elif "-ye" in userflags:
-                    return fileio.readxlsx(filetoread, "-ye", comparams)
+                    return fio.readxlsx(filetoread, "-ye", comparams)
                 elif "-xye" in userflags:
-                    return fileio.readxlsx(filetoread, "-xye", comparams)
+                    return fio.readxlsx(filetoread, "-xye", comparams)
                 elif "-xeye" in userflags:
-                    return fileio.readxlsx(filetoread, "-xeye", comparams)
+                    return fio.readxlsx(filetoread, "-xeye", comparams)
                 elif "-xeyeze" in userflags:
-                    return fileio.readxlsx(filetoread, "-xeyeze", comparams)
+                    return fio.readxlsx(filetoread, "-xeyeze", comparams)
                 elif "-cye" in userflags:
-                    return fileio.readtxt(filetoread, "-cye", comparams)
+                    return fio.readtxt(filetoread, "-cye", comparams)
                 elif "-cyz" in userflags:
-                    return fileio.readtxt(filetoread, "-cyz", comparams)
+                    return fio.readtxt(filetoread, "-cyz", comparams)
                 elif "-ccz" in userflags:
-                    return fileio.readtxt(filetoread, "-ccz", comparams)
+                    return fio.readtxt(filetoread, "-ccz", comparams)
                 else:
                     return "No xlsx file structure given."
             elif "-svb" in userflags:
                 if "-y" in userflags:
-                    return fileio.readsvb(filetoread, "-y", comparams)
+                    return fio.readsvb(filetoread, "-y", comparams)
                 elif "-xy" in userflags:
-                    return fileio.readsvb(filetoread, "-xy", comparams)
+                    return fio.readsvb(filetoread, "-xy", comparams)
                 elif "-xye" in userflags:
-                    return fileio.readsvb(filetoread, "-xye", comparams)
+                    return fio.readsvb(filetoread, "-xye", comparams)
                 else:
                     return "No svb file structure given."
             elif "-fb" in userflags:
-                return fileio.readfb(filetoread)
+                return fio.readfb(filetoread)
             elif "-pvk" in userflags:
-                return fileio.readpvk(filetoread)
+                return fio.readpvk(filetoread)
             elif "-i3x" in userflags:
-                return fileio.readi3x(filetoread)
+                return fio.readi3x(filetoread)
             else:
                 return "Invalid file type or structure given!"
         except:
@@ -319,10 +321,11 @@ class Command(object):
         if len(userflags) == 0:
             userflags.append("-xlsx")
         try:
+            fio = fileio.IO(self.inst)
             if "-txt" in userflags:
                     return "No txt file structure programmed!"
             elif "-xlsx" in userflags:
-                fileio.writexlsx(filetowrite, sheet_name='Output', header_list=[], col_width_list=[], row_heights=152)
+                fio.writexlsx(filetowrite, sheet_name='Output', header_list=[], col_width_list=[], row_heights=152)
             else:
                 return "Invalid file type or structure given!"
         except:
@@ -379,6 +382,8 @@ class Command(object):
                         break
                 if runmodule[-1:] != ")":
                     runmodule += "()"
+                if runmodule[-2:] == '()':
+                    runmodule = str(runmodule[:-2] + '(self.inst)')
                 exec(runmodule)
                 return "\nModule Run Successfully! Command Entered: " + runmodule
             if "-i" in userflags:
@@ -390,7 +395,7 @@ class Command(object):
                 if not os.path.exists(filetoread):
                     return "File Does Not Exist!"
                 print("\nRunning Script: [" + filetoread + "]\tInteractive Mode: " + str(interactivemode) + "\n")
-                return runscript(filetoread, interactivemode)
+                return self.runscript(filetoread, interactivemode)
         return "Script Ran Successfully!"
 
     def do_cwd(self, *args):
@@ -415,8 +420,8 @@ class Command(object):
         userflags = inparse.cmdflags
 
         if "-default" in userflags:
-            data.directories.working.set(os.path.dirname(os.path.abspath(__file__)))
-            return "Current working directory SET to: " + data.directories.working.get()
+            self.inst.data.directories.working.set(os.path.dirname(os.path.abspath(__file__)))
+            return "Current working directory SET to: " + self.inst.data.directories.working.get()
 
         if not inparse.modifiers:
             # inparse.modifiers is populated when path is entered.  Spaces and numbers in path are removed in this
@@ -425,19 +430,19 @@ class Command(object):
                 args_list.remove('-set')
                 arg_dir = os.path.abspath(" ".join(args_list))
                 if os.path.isdir(arg_dir):
-                    data.directories.working.set(arg_dir)
-                    return f"Current working directory SET to: {data.directories.working.get()}"
+                    self.inst.data.directories.working.set(arg_dir)
+                    return f"Current working directory SET to: {self.inst.data.directories.working.get()}"
                 else:
-                    return f"Invalid Directory! Current working directory: {data.directories.working.get()}"
+                    return f"Invalid Directory! Current working directory: {self.inst.data.directories.working.get()}"
             elif '-output' in args_list:
                 args_list.remove('-output')
                 arg_dir = " ".join(args_list)
                 path_check = [os.path.exists(arg_dir), os.access(os.path.dirname(arg_dir), os.W_OK)]
                 if True not in path_check:
                         return "Invalid Directory! No output directory has been set!"
-                data.directories.output.set(arg_dir)
-                return f"Current output directory SET to: {data.directories.output.get()}"
-        return f"No changes made. Current working directory: {data.directories.working.get()}"
+                self.inst.data.directories.output.set(arg_dir)
+                return f"Current output directory SET to: {self.inst.data.directories.output.get()}"
+        return f"No changes made. Current working directory: {self.inst.data.directories.working.get()}"
 
     def do_cl(self, *args):
         """\nCommand: CLear\n
@@ -455,7 +460,7 @@ class Command(object):
 
         Options: N/A"""
         inparse = inputprocessing.InputParser()
-        lastbuffer = data.matrix.length()
+        lastbuffer = self.inst.data.matrix.length()
 
         inparse.prompt = ["First Buffer", "Last Buffer", "Index Increment"]
         inparse.inputbounds = [[1, lastbuffer], [1, lastbuffer], [1, lastbuffer]]
@@ -469,7 +474,7 @@ class Command(object):
             elif len(inparse.userinput) == 2:
                 inparse.userinput.append('1')
             if "all" in inparse.modifiers:
-                data.matrix.clear()
+                self.inst.data.matrix.clear()
                 return "All Data Cleared!"
             gotparams = inparse.getparams()
         if not gotparams:
@@ -481,7 +486,7 @@ class Command(object):
                 delarray.append(i-1)
             delarray.sort()
             for i in list(reversed(delarray)):
-                data.matrix.remove_buffer_by_number(i+1)
+                self.inst.data.matrix.remove_buffer_by_number(i+1)
             delarray = [val+1 for val in delarray]
             return "Buffers: " + str(delarray) + " removed!"
 
@@ -496,7 +501,7 @@ class Command(object):
         Default Options: N/A
 
         Options: N/A"""
-        if data.matrix.length() == 0:
+        if self.inst.data.matrix.length() == 0:
             return "No data in memory!"
         else:
             # header
@@ -507,8 +512,8 @@ class Command(object):
             boarder = [7*'-', 8*'-', 18*'-', 18*'-', 18*'-', 50*'-']
 
             # buffer info
-            for i in range(1, data.matrix.length()+1, 1):
-                buffer = data.matrix.buffer(i)
+            for i in range(1, self.inst.data.matrix.length()+1, 1):
+                buffer = self.inst.data.matrix.buffer(i)
                 pnt = ' '
                 x = ' '
                 y = ' '
@@ -584,7 +589,7 @@ class Command(object):
         Options: N/A
         """
         inparse = inputprocessing.InputParser()
-        lastbuffer = data.matrix.length()
+        lastbuffer = self.inst.data.matrix.length()
         inparse.prompt = ["Buffer to Subtract", "First Buffer", "Last Buffer"]
         inparse.inputbounds = [[1, lastbuffer], [1, lastbuffer], [1, lastbuffer]]
         inparse.defaultinput = ['1', '1', str(lastbuffer)]
@@ -598,10 +603,10 @@ class Command(object):
             return "No buffers to subtract!"
         else:
             comparams = [int(val) for val in inparse.userinput]
-            subtractionbuffer = data.matrix.buffer(comparams[0]).data.y.get()
-            subtractionye = data.matrix.buffer(comparams[0]).data.ye.get()
+            subtractionbuffer = self.inst.data.matrix.buffer(comparams[0]).data.y.get()
+            subtractionye = self.inst.data.matrix.buffer(comparams[0]).data.ye.get()
             for i in range(comparams[1], comparams[2]+1, 1):
-                buffer = data.matrix.buffer(i)
+                buffer = self.inst.data.matrix.buffer(i)
                 data_y = buffer.data.y.get()
                 error_y = buffer.data.ye.get()
                 minlen = min([len(data_y), len(subtractionbuffer)])
@@ -646,9 +651,9 @@ class Command(object):
         """
         inparse = inputprocessing.InputParser()
         flags = inparse.cmdflags
-        lastbuffer = data.matrix.length()
+        lastbuffer = self.inst.data.matrix.length()
 
-        shortest = data.matrix.shortest_x_length()
+        shortest = self.inst.data.matrix.shortest_x_length()
 
         inparse.prompt = ["First Buffer", "Last Buffer", "Number of Resulting Points"]
         inparse.inputbounds = [[1, lastbuffer], [1, lastbuffer], [3, shortest]]
@@ -661,7 +666,7 @@ class Command(object):
         firstbuffer, lastbuffer, npoints = inparse.userinput
 
         for i in range(firstbuffer, lastbuffer+1):
-            buffer = copy.deepcopy(data.matrix.buffer(i))
+            buffer = copy.deepcopy(self.inst.data.matrix.buffer(i))
             xtemp = []
             xetemp = []
             ytemp = []
@@ -670,7 +675,7 @@ class Command(object):
             zetemp = []
             xlen = buffer.data.x.length()
             if xlen <= npoints:
-                data.matrix.add_buffer(buffer)
+                self.inst.data.matrix.add_buffer(buffer)
                 continue
             stepsize = int(np.floor(xlen/npoints))
             if stepsize > 1:
@@ -726,7 +731,7 @@ class Command(object):
             buffer.data.z.set(ztemp)
             buffer.data.ze.set(zetemp)
             buffer.comments.add("Data Resampled to %s points" % npoints)
-            data.matrix.add_buffer(buffer)
+            self.inst.data.matrix.add_buffer(buffer)
         return '\nData Successfully Resampled!'
 
     def do_tri(self, *args):
@@ -752,8 +757,8 @@ class Command(object):
         \tPoint index begins at 1, not 0
         """
         inparse = inputprocessing.InputParser()
-        lastbuffer = data.matrix.length()
-        shortest = data.matrix.shortest_x_length()
+        lastbuffer = self.inst.data.matrix.length()
+        shortest = self.inst.data.matrix.shortest_x_length()
         useval = False
 
         inparse.prompt = ["First Buffer", "Last Buffer", "First Point Index", "Last Point Index"]
@@ -764,23 +769,21 @@ class Command(object):
             inparse.prompt = ["First Buffer", "Last Buffer", "Min X-val", "Max X-val"]
             inparse.inputbounds = [[1, lastbuffer], [1, lastbuffer], [-np.inf, np.inf], [-np.inf, np.inf]]
             inparse.defaultinput = ['1', lastbuffer,
-                                    str(data.matrix.buffer(1).data.x.get()[0]),
-                                    str(data.matrix.buffer(1).data.x.get()[-1])]
+                                    str(self.inst.data.matrix.buffer(1).data.x.get()[0]),
+                                    str(self.inst.data.matrix.buffer(1).data.x.get()[-1])]
         if not inparse(args):
             return "Invalid Input!"
         if not inparse.getparams():
             return"\nNo Data Was Trimmed!"
 
-        firstbuffer, lastbuffer = [int(x) for x in inparse.userinput[:2]]
+        firstbuffer, lastbuffer, indexi, indexf = [int(x) for x in inparse.userinput]
         for i in range(firstbuffer, lastbuffer + 1):
-            buffer = data.matrix.buffer(i)
+            buffer = self.inst.data.matrix.buffer(i)
 
             if useval:
                 firstbuffer, lastbuffer, vali, valf = inparse.userinput
                 indexi = buffer.data.x.nearest_index_to_value(vali)
                 indexf = buffer.data.x.nearest_index_to_value(valf)
-            else:
-                firstbuffer, lastbuffer, indexi, indexf = inparse.userinput
 
             low = min([indexi, indexf])
             high = max([indexi, indexf])
@@ -797,7 +800,7 @@ class Command(object):
             if buffer.data.ze.length() > 0:
                 buffer.data.ze.set(buffer.data.ze.get()[low:high])
 
-            data.matrix.set_buffer_by_number(buffer, i)
+            self.inst.data.matrix.set_buffer_by_number(buffer, i)
         return '\nData Successfully Trimmed!'
 
     def do_shi(self, *args):
@@ -823,7 +826,7 @@ class Command(object):
         \tN/A
         """
         inparse = inputprocessing.InputParser()
-        lastbuffer = data.matrix.length()
+        lastbuffer = self.inst.data.matrix.length()
 
         inparse.prompt = ["First Buffer", "Last Buffer", "Constant Value"]
         inparse.inputbounds = [[1, lastbuffer], [1, lastbuffer], [-np.inf, np.inf]]
@@ -838,7 +841,7 @@ class Command(object):
         firstbuffer, lastbuffer, const = inparse.userinput
 
         for i in range(firstbuffer, lastbuffer + 1):
-            buffer = data.matrix.buffer(i)
+            buffer = self.inst.data.matrix.buffer(i)
             # add const to Z axis
             if "-z" in inparse.cmdflags:
                 buffer.data.z.set(buffer.data.z.get() + const)
@@ -872,7 +875,7 @@ class Command(object):
         \tN/A
         """
         inparse = inputprocessing.InputParser()
-        lastbuffer = data.matrix.length()
+        lastbuffer = self.inst.data.matrix.length()
 
         inparse.prompt = ["First Buffer", "Last Buffer", "Constant Value"]
         inparse.inputbounds = [[1, lastbuffer], [1, lastbuffer], [-np.inf, np.inf]]
@@ -887,7 +890,7 @@ class Command(object):
         firstbuffer, lastbuffer, const = inparse.userinput
 
         for i in range(firstbuffer, lastbuffer + 1):
-            buffer = data.matrix.buffer(i)
+            buffer = self.inst.data.matrix.buffer(i)
             # mul const to Z axis
             if "-z" in inparse.cmdflags:
                 buffer.data.z.set(buffer.data.z.get() * const)
@@ -918,7 +921,7 @@ class Command(object):
         \tN/A
         """
         inparse = inputprocessing.InputParser()
-        lastbuffer = data.matrix.length()
+        lastbuffer = self.inst.data.matrix.length()
         firstbuffer = 1
 
         if '-all' not in args and 'all' not in args:
@@ -934,28 +937,28 @@ class Command(object):
             inparse.userinput = [int(val) for val in inparse.userinput]
             firstbuffer, lastbuffer= inparse.userinput
 
-        xr = data.plot_limits.x_range.get()
-        yr = data.plot_limits.y_range.get()
-        zr = data.plot_limits.z_range.get()
-        br = data.plot_limits.buffer_range.get()
-        ma = data.plot_limits.is_active
+        xr = self.inst.data.plot_limits.x_range.get()
+        yr = self.inst.data.plot_limits.y_range.get()
+        zr = self.inst.data.plot_limits.z_range.get()
+        br = self.inst.data.plot_limits.buffer_range.get()
+        ma = self.inst.data.plot_limits.is_active
 
-        commander = commands.Command()
         pti = 1 if not xr else min(xr)
-        ptf = data.matrix.buffer(1).data.x.length() if not xr else max(xr)
-        commander(f'pl off')
-        commander(f'pl {firstbuffer} {lastbuffer} {pti} {ptf}')
-        commander(f'pl on')
-        commander(f'fit')
-        commander(f'pl off')
+        ptf = self.inst.data.matrix.buffer(1).data.x.length() if not xr else max(xr)
+        self(f'fix all')
+        self(f'pl off')
+        self(f'pl {firstbuffer} {lastbuffer} {pti} {ptf}')
+        self(f'pl on')
+        self(f'fit')
+        self(f'pl off')
+        self(f'fre all')
 
-        data.plot_limits.x_range.set(xr)
-        data.plot_limits.y_range.set(yr)
-        data.plot_limits.z_range.set(zr)
-        data.plot_limits.buffer_range.set(br)
-        data.plot_limits.is_active = ma
+        self.inst.data.plot_limits.x_range.set(xr)
+        self.inst.data.plot_limits.y_range.set(yr)
+        self.inst.data.plot_limits.z_range.set(zr)
+        self.inst.data.plot_limits.buffer_range.set(br)
+        self.inst.data.plot_limits.is_active = ma
         return '\nData Successfully Modeled!'
-
 
     def do_ori(self, *args):
         """\nCommand: ORIgin\n
@@ -980,7 +983,7 @@ class Command(object):
         \tN/A
         """
         inparse = inputprocessing.InputParser()
-        lastbuffer = data.matrix.length()
+        lastbuffer = self.inst.data.matrix.length()
 
         inparse.prompt = ["First Buffer", "Last Buffer", "Point Index"]
         inparse.inputbounds = [[1, lastbuffer], [1, lastbuffer], [1, np.inf]]
@@ -999,7 +1002,7 @@ class Command(object):
             inparse.cmdflags = ['-x', '-y', '-z']
 
         for i in range(firstbuffer, lastbuffer + 1):
-            buffer = data.matrix.buffer(i)
+            buffer = self.inst.data.matrix.buffer(i)
             # sub const to Z axis
             if "-z" in inparse.cmdflags and buffer.data.z.length() > 0:
                 const = buffer.data.z.value_at_index(point_index)
@@ -1041,10 +1044,10 @@ class Command(object):
         \t-noweight
         Multiplot parameters will override individual settings."""
         inparse = inputprocessing.InputParser()
-        if data.plot_limits.is_active:
-            firstbuffer, lastbuffer = data.plot_limits.buffer_range.get()
+        if self.inst.data.plot_limits.is_active:
+            firstbuffer, lastbuffer = self.inst.data.plot_limits.buffer_range.get()
         else:
-            lastbuffer = data.matrix.length()
+            lastbuffer = self.inst.data.matrix.length()
             firstbuffer = 1
         inparse.prompt = ["First Buffer", "Last Buffer", "Index Increment"]
         inparse.inputbounds = [[firstbuffer, lastbuffer], [firstbuffer, lastbuffer], [firstbuffer, lastbuffer]]
@@ -1057,13 +1060,13 @@ class Command(object):
         pltarray = []
         modifiers = [val.lower() for val in modifiers]
         for i in range(len(comparams)):
-            if data.plot_limits.is_active:
+            if self.inst.data.plot_limits.is_active:
                 comparams[i] = int(comparams[i]) if firstbuffer <= comparams[i] else firstbuffer
                 comparams[i] = int(comparams[i]) if comparams[i] <= lastbuffer else lastbuffer
             else:
                 comparams[i] = int(comparams[i]) if comparams[i] <= lastbuffer else lastbuffer
 
-        plotwindow = plot.plotter()
+        plotwindow = plot.plotter(self.inst.data)
         if 'all' in modifiers:
             pltarray = [buf for buf in range(firstbuffer, lastbuffer + 1)]
         elif "-l" in userflags:
@@ -1101,10 +1104,10 @@ class Command(object):
         delay = 0.5  # time in seconds
         auto = False
         inparse = inputprocessing.InputParser()
-        if data.plot_limits.is_active:
-            firstbuffer, lastbuffer = data.plot_limits.buffer_range.get()
+        if self.inst.data.plot_limits.is_active:
+            firstbuffer, lastbuffer = self.inst.data.plot_limits.buffer_range.get()
         else:
-            lastbuffer = data.matrix.length()
+            lastbuffer = self.inst.data.matrix.length()
             firstbuffer = 1
         inparse.prompt = ["First Buffer", "Last Buffer", "Index Increment"]
         inparse.inputbounds = [[firstbuffer, lastbuffer], [firstbuffer, lastbuffer], [1, lastbuffer]]
@@ -1115,7 +1118,7 @@ class Command(object):
         comparams = inparse.userinput
         if len(comparams) == 0:
             inparse.userinput = inparse.defaultinput
-        plotwindow = plot.plotter()
+        plotwindow = plot.plotter(self.inst.data)
         pltarray = []
         comparams = [int(val) for val in comparams]
         userflags = [st for st in userflags if "-auto" in st]
@@ -1153,7 +1156,7 @@ class Command(object):
         Options: N/A"""
         fail = "Invalid Input!"
         success = "Please input default parameters (see command: ap).\nFunction(s) set: "
-        fitter = fitfxns.datafit()
+        fitter = fitfxns.datafit(self.inst)
         count = 1
         userin = 100
         fxnlist = fitter.getfxnlist()
@@ -1165,7 +1168,7 @@ class Command(object):
 
         if len(args) == 0:  # If no arguments provided, return list of available functions
             return fitter.showfxntable()
-        elif data.matrix.length() == 0:  # If data matrix is invalid, return call
+        elif self.inst.data.matrix.length() == 0:  # If data matrix is invalid, return call
             return "No Data in Memory! Functions Cannot Be Applied!"
         elif 'info' in inparse.modifiers:  # If info in args, show function info
             return fitter(args)
@@ -1214,23 +1217,22 @@ class Command(object):
             "\nInvalid Functions Specified!"
 
     def do_fit(self, *args):
-        commander = commands.Command()
         args = [val.lower() for val in args]
         ### Pre-flight check for any parameter linking ###
         linked = False
         plon = False
-        if data.plot_limits.is_active:
-            firstbuffer, lastbuffer = data.plot_limits.buffer_range.get()
-            firstpoint, lastpoint = data.plot_limits.x_range.get()
+        if self.inst.data.plot_limits.is_active:
+            firstbuffer, lastbuffer = self.inst.data.plot_limits.buffer_range.get()
+            firstpoint, lastpoint = self.inst.data.plot_limits.x_range.get()
             plon = True
         else:
-            lastbuffer = data.matrix.length()
+            lastbuffer = self.inst.data.matrix.length()
             firstbuffer = 1
             firstpoint = 1
-            lastpoint = data.matrix.shortest_x_length()
+            lastpoint = self.inst.data.matrix.shortest_x_length()
 
         for i in range(firstbuffer, lastbuffer + 1):
-            buffer = data.matrix.buffer(i)
+            buffer = self.inst.data.matrix.buffer(i)
             linked = True if len([x for x in buffer.fit.link.get() if x is not None]) >= 1 else False
             if linked:
                 break
@@ -1239,35 +1241,35 @@ class Command(object):
         alllinks = []
         if "-ind" in args:
             for i in range(firstbuffer, lastbuffer + 1):
-                buffer = data.matrix.buffer(i)
+                buffer = self.inst.data.matrix.buffer(i)
                 alllinks.append(buffer.fit.link.get())
-            commander("unl -all")
+            self("unl -all")
         ### If data is not linked or override to independent fitting and restore link and plot limit states###
         if not linked:
             for i in range(firstbuffer, lastbuffer + 1):
                 com_list = [i, i, firstpoint, lastpoint]
                 command = "pl {} {} {} {}".format(*com_list)
-                commander("pl off")
-                commander(command)
-                commander("pl on")
-                print(fitfxns.dofit(*args))
-            commander("pl off")
+                self("pl off")
+                self(command)
+                self("pl on")
+                print(fitfxns.datafit(self.inst).dofit(*args))
+            self("pl off")
             if plon:
                 com_list = [firstbuffer, lastbuffer, firstpoint, lastpoint]
                 command = "pl {} {} {} {}".format(*com_list)
-                commander(command)
-                commander("pl on")
+                self(command)
+                self("pl on")
             else:
-                commander("pl off")
+                self("pl off")
         if "-ind" in args:  ### if -ind flag, restore original links ###
             for i in range(firstbuffer, lastbuffer + 1):
-                buffer = data.matrix.buffer(i)
+                buffer = self.inst.data.matrix.buffer(i)
                 buffer.fit.link.set(alllinks[i - 1])
             return "\nIndependent Fitting Complete!"
         elif not linked:
             return "\nIndependent Fitting Complete!"
         else:  ### if data is linked we run global fitting ###
-            print(fitfxns.dofit(*args))
+            print(fitfxns.datafit(self.inst).dofit(*args))
             return "\nGlobal Fitting Complete!"
 
     def do_ap(self, *args):
@@ -1303,16 +1305,16 @@ class Command(object):
         inparse(args)
         userincount = len(inparse.userinput)
         applyall = False
-        if data.plot_limits.is_active:
-            firstbuffer, lastbuffer = data.plot_limits.buffer_range.get()
+        if self.inst.data.plot_limits.is_active:
+            firstbuffer, lastbuffer = self.inst.data.plot_limits.buffer_range.get()
         elif userincount == 1:
             firstbuffer = int(inparse.userinput[0])
             lastbuffer = int(inparse.userinput[0])
         else:
-            lastbuffer = data.matrix.length()
+            lastbuffer = self.inst.data.matrix.length()
             firstbuffer = 1
-        if len(data.matrix.buffer(firstbuffer).fit.function.get()) == 0:
-            updatefixlnk()
+        if len(self.inst.data.matrix.buffer(firstbuffer).fit.function.get()) == 0:
+            self.updatefixlnk()
             return "\nNo Function Defined. Try command: fun ."
         if "-all" in inparse.cmdflags or "all" in inparse.modifiers:
             applyall = True
@@ -1334,17 +1336,17 @@ class Command(object):
             if not inparse.getparams():
                 return "\nNo Parameters Were Copied!"
             inparse.userinput = [int(val) for val in inparse.userinput]
-            paramstocopy = data.matrix.buffer(parambuffer).fit.parameter.get()
+            paramstocopy = self.inst.data.matrix.buffer(parambuffer).fit.parameter.get()
             for i in range(inparse.userinput[0], inparse.userinput[1]+1):
-                data.matrix.buffer(i).fit.parameter.set(paramstocopy[:])
-            updatefixlnk()
+                self.inst.data.matrix.buffer(i).fit.parameter.set(paramstocopy[:])
+            self.updatefixlnk()
             return "\nParameters copied from Buffer[" + str(parambuffer) + "] to Buffers[" + \
                    str(inparse.userinput[0]) + " - " + str(inparse.userinput[1]) + "] !"
 
         i = firstbuffer
         while i <= lastbuffer:
-            fitparams = fitfxns.datafit()
-            fitparams.update(data.matrix.buffer(i).fit.function_index.get())
+            fitparams = fitfxns.datafit(self.inst)
+            fitparams.update(self.inst.data.matrix.buffer(i).fit.function_index.get())
             if not applyall:
                 inparse.prompt = ["Buffer Number"]
                 inparse.inputbounds = [[firstbuffer, lastbuffer]]
@@ -1352,26 +1354,26 @@ class Command(object):
             inparse.prompt.extend([str(val) for val in fitparams.paramid])
             inparse.inputbounds.extend(fitparams.parambounds)
             inparse.defaultinput.extend([str(val) for val in fitparams.paramdefaults])
-            inparse.previousvals = [str(i)] + [str(val) for val in data.matrix.buffer(i).fit.parameter.get()]
+            inparse.previousvals = [str(i)] + [str(val) for val in self.inst.data.matrix.buffer(i).fit.parameter.get()]
             if not inparse.getparams():
                 return "Changes Made Before Aborting Operation Have Been Kept!"
             inparse.userinput = [float(val) for val in inparse.userinput]
             i = int(inparse.userinput[0])
             if not applyall:
-                data.matrix.buffer(i).fit.parameter.set(inparse.userinput[1:])
+                self.inst.data.matrix.buffer(i).fit.parameter.set(inparse.userinput[1:])
             if applyall:
                 #need use extend method to prevent linking dictionary values by reference // replaced with deepcopy
                 for j in range(firstbuffer, lastbuffer + 1):
-                    data.matrix.buffer(j).fit.parameter.set(copy.deepcopy(inparse.userinput))
-                updatefixlnk()
+                    self.inst.data.matrix.buffer(j).fit.parameter.set(copy.deepcopy(inparse.userinput))
+                self.updatefixlnk()
                 return "\nAll Initial Parameters Set!"
             if userincount > 0:
-                updatefixlnk()
+                self.updatefixlnk()
                 return "\nInitial Parameters Set for Buffer[%s]!" % int(inparse.userinput[0])
             inparse.clear()
             fitparams.clear()
             i += 1
-        updatefixlnk()
+        self.updatefixlnk()
         return "\nInitial Parameters Set!"
 
     def do_lnk(self, *args):
@@ -1396,38 +1398,38 @@ class Command(object):
         Modifiers"
         \tall         (Applies parameter input to all buffers within plot limits)
         """
-        fitparams = fitfxns.datafit()
+        fitparams = fitfxns.datafit(self.inst)
         inparse = inputprocessing.InputParser()
         inparse(args)
         applyall = False
-        if data.plot_limits.is_active:
-            firstbuffer, lastbuffer = data.plot_limits.buffer_range.get()
+        if self.inst.data.plot_limits.is_active:
+            firstbuffer, lastbuffer = self.inst.data.plot_limits.buffer_range.get()
         else:
-            lastbuffer = data.matrix.length()
+            lastbuffer = self.inst.data.matrix.length()
             firstbuffer = 1
-        if len(data.matrix.buffer(firstbuffer).fit.parameter.get()) < 1:
+        if len(self.inst.data.matrix.buffer(firstbuffer).fit.parameter.get()) < 1:
             return "\nNo Initial Parameters Defined! Try command: ap ."
         if "-all" in inparse.cmdflags or "all" in inparse.modifiers:
             applyall = True
         if len(args) == 1:
             if applyall:
                 for i in range(firstbuffer, lastbuffer - 1):
-                    buffer = data.matrix.buffer(i)
+                    buffer = self.inst.data.matrix.buffer(i)
                     fitparams.update(buffer.fit.function_index.get())
                     links = copy.deepcopy(buffer.fit.link.get())
                     if i != firstbuffer:
                         for j in range(len(links)):
                             links[j] = f"{fitparams.paramid[j]}_{j+1}_{firstbuffer}"
-                    data.matrix.buffer(i).fit.link.set(links)
+                    self.inst.data.matrix.buffer(i).fit.link.set(links)
                 return "\nAll Parameters Linked!"
             elif len(inparse.userinput) > 0:
                 try:
                     for i in range(firstbuffer, lastbuffer + 1):
-                        fitparams.update(data.matrix.buffer(i).fit.function_index.get())
+                        fitparams.update(self.inst.data.matrix.buffer(i).fit.function_index.get())
                         if i != firstbuffer:
-                            links = copy.deepcopy(data.matrix.buffer(i).fit.link.get())
+                            links = copy.deepcopy(self.inst.data.matrix.buffer(i).fit.link.get())
                             links[int(inparse.userinput[0]) - 1] = fitparams.paramid[int(inparse.userinput[0])-1] + "_{}_{}".format(int(inparse.userinput[0]), firstbuffer)
-                            data.matrix.buffer(i).fit.link.set(links)
+                            self.inst.data.matrix.buffer(i).fit.link.set(links)
                 except:
                     return "\nInvalid Parameter Specified!"
                 return "\nParameter %s Linked Across All Buffers!" % str(int(inparse.userinput[0]))
@@ -1437,11 +1439,11 @@ class Command(object):
             inparse.defaultinput = [firstbuffer, 1, lastbuffer, 1]
             if not inparse.getparams():
                 return"\nNo Buffers Were Linked!"
-            fitparams.update(data.matrix.buffer(int(inparse.userinput[0])).fit.function_index.get())
+            fitparams.update(self.inst.data.matrix.buffer(int(inparse.userinput[0])).fit.function_index.get())
             try:
-                links = data.matrix.buffer(int(inparse.userinput[0])).fit.link.get()
+                links = self.inst.data.matrix.buffer(int(inparse.userinput[0])).fit.link.get()
                 links[int(inparse.userinput[1]) - 1] = fitparams.paramid[int(inparse.userinput[1])-1] + "_{}_{}".format(int(inparse.userinput[3]), int(inparse.userinput[2]))
-                data.matrix.buffer(int(inparse.userinput[0])).fit.link.set(links)
+                self.inst.data.matrix.buffer(int(inparse.userinput[0])).fit.link.set(links)
                 return "\nParameter " + str(inparse.userinput[1]) + " of Buffer " + str(inparse.userinput[0]) + \
                        " Linked to Parameter " + str(inparse.userinput[3]) + " of Buffer " + str(inparse.userinput[2])
             except:
@@ -1474,27 +1476,27 @@ class Command(object):
         inparse = inputprocessing.InputParser()
         inparse(args)
         applyall = False
-        if data.plot_limits.is_active:
-            firstbuffer, lastbuffer = data.plot_limits.buffer_range.get()
+        if self.inst.data.plot_limits.is_active:
+            firstbuffer, lastbuffer = self.inst.data.plot_limits.buffer_range.get()
         else:
-            lastbuffer = data.matrix.length()
+            lastbuffer = self.inst.data.matrix.length()
             firstbuffer = 1
-        if len(data.matrix.buffer(firstbuffer).fit.parameter.get()) < 1:
+        if len(self.inst.data.matrix.buffer(firstbuffer).fit.parameter.get()) < 1:
             return "\nNo Initial Parameters Defined! Try command: ap ."
         if "-all" in inparse.cmdflags or "all" in inparse.modifiers:
             applyall = True
         if len(args) == 1:
             if applyall:
                 for i in range(firstbuffer, lastbuffer+1):
-                    unlinks = [None] * len(data.matrix.buffer(i).fit.link.get())
-                    data.matrix.buffer(i).fit.link.set(unlinks)
+                    unlinks = [None] * len(self.inst.data.matrix.buffer(i).fit.link.get())
+                    self.inst.data.matrix.buffer(i).fit.link.set(unlinks)
                 return "\nAll Parameters Unlinked!"
             elif len(inparse.userinput) > 0:
                 try:
                     for i in range(firstbuffer, lastbuffer+1):
-                        links = data.matrix.buffer(i).fit.link.get()
+                        links = self.inst.data.matrix.buffer(i).fit.link.get()
                         links[int(inparse.userinput[0]) - 1] = None
-                        data.matrix.buffer(i).fit.link.set(links)
+                        self.inst.data.matrix.buffer(i).fit.link.set(links)
                 except:
                     return "\nInvalid Parameter Specified!"
                 return "\nParameter %s Unlinked Across All Buffers!" % str(int(inparse.userinput[0]))
@@ -1505,9 +1507,9 @@ class Command(object):
             if not inparse.getparams():
                 return "\nNo Parameter Was Linked!"
             try:
-                links = data.matrix.buffer(int(inparse.userinput[0])).fit.link.get()
+                links = self.inst.data.matrix.buffer(int(inparse.userinput[0])).fit.link.get()
                 links[int(inparse.userinput[1]) - 1] = None
-                data.matrix.buffer(int(inparse.userinput[0])).fit.link.set(links)
+                self.inst.data.matrix.buffer(int(inparse.userinput[0])).fit.link.set(links)
                 return "\nParameter " + str(inparse.userinput[1]) + " of Buffer " + \
                        str(inparse.userinput[0]) + " Unlinked!"
             except:
@@ -1540,26 +1542,26 @@ class Command(object):
         inparse = inputprocessing.InputParser()
         inparse(args)
         applyall = False
-        if data.plot_limits.is_active:
-            firstbuffer, lastbuffer = data.plot_limits.buffer_range.get()
+        if self.inst.data.plot_limits.is_active:
+            firstbuffer, lastbuffer = self.inst.data.plot_limits.buffer_range.get()
         else:
-            lastbuffer = data.matrix.length()
+            lastbuffer = self.inst.data.matrix.length()
             firstbuffer = 1
-        if len(data.matrix.buffer(firstbuffer).fit.parameter.get()) < 1:
+        if len(self.inst.data.matrix.buffer(firstbuffer).fit.parameter.get()) < 1:
             return "\nNo Initial Parameters Defined! Try command: ap ."
         if "-all" in inparse.cmdflags or "all" in inparse.modifiers:
             applyall = True
         if len(args) == 1:
             if applyall:
                 for i in range(firstbuffer, lastbuffer+1):
-                    new_free = [False] * len(data.matrix.buffer(i).fit.free.get())
-                    data.matrix.buffer(i).fit.free.set(new_free)
+                    new_free = [False] * len(self.inst.data.matrix.buffer(i).fit.free.get())
+                    self.inst.data.matrix.buffer(i).fit.free.set(new_free)
                 return "\nAll Parameters Fixed!"
             else:
                 for i in range(firstbuffer, lastbuffer+1):
-                    free = data.matrix.buffer(i).fit.free.get()
+                    free = self.inst.data.matrix.buffer(i).fit.free.get()
                     free[int(inparse.userinput[0]) - 1] = False
-                    data.matrix.buffer(i).fit.free.set(free)
+                    self.inst.data.matrix.buffer(i).fit.free.set(free)
             return "\nParameter %s Fixed!" % str(int(inparse.userinput[0]))
         else:
             inparse.prompt = ["Buffer to modify", "Parameter to fix"]
@@ -1567,9 +1569,9 @@ class Command(object):
             inparse.defaultinput = [firstbuffer, 1]
             if not inparse.getparams():
                 return "\nNo Parameter Was Fixed!"
-            free = data.matrix.buffer(int(inparse.userinput[0])).fit.free.get()
+            free = self.inst.data.matrix.buffer(int(inparse.userinput[0])).fit.free.get()
             free[int(inparse.userinput[1]) - 1] = False
-            data.matrix.buffer(int(inparse.userinput[0])).fit.free.set(free)
+            self.inst.data.matrix.buffer(int(inparse.userinput[0])).fit.free.set(free)
             return "Parameter " + str(int(inparse.userinput[1])) + " of buffer " + \
                    str(int(inparse.userinput[1])) + " Fixed!"
 
@@ -1598,35 +1600,35 @@ class Command(object):
         inparse = inputprocessing.InputParser()
         inparse(args)
         applyall = False
-        if data.plot_limits.is_active:
-            firstbuffer, lastbuffer = data.plot_limits.buffer_range
+        if self.inst.data.plot_limits.is_active:
+            firstbuffer, lastbuffer = self.inst.data.plot_limits.buffer_range
         else:
-            lastbuffer = data.matrix.length()
+            lastbuffer = self.inst.data.matrix.length()
             firstbuffer = 1
-        if len(data.matrix.buffer(firstbuffer).fit.parameter.get()) < 1:
+        if len(self.inst.data.matrix.buffer(firstbuffer).fit.parameter.get()) < 1:
             return "\nNo Initial Parameters Defined! Try command: ap ."
         if "-all" in inparse.cmdflags or "all" in inparse.modifiers:
             applyall = True
         if len(args) == 1:
             if applyall:
                 for i in range(firstbuffer, lastbuffer+1):
-                    free = [True] * len(data.matrix.buffer(i).fit.free.get())
-                    data.matrix.buffer(i).fit.free.set(free)
+                    free = [True] * len(self.inst.data.matrix.buffer(i).fit.free.get())
+                    self.inst.data.matrix.buffer(i).fit.free.set(free)
                 return "\nAll Parameters Freed!"
             else:
                 for i in range(firstbuffer, lastbuffer+1):
-                    free = data.matrix.buffer(i).fit.free.get()
+                    free = self.inst.data.matrix.buffer(i).fit.free.get()
                     free[int(inparse.userinput[0]) - 1] = True
-                    data.matrix.buffer(i).fit.free.set(free)
+                    self.inst.data.matrix.buffer(i).fit.free.set(free)
             return "\nParameter %s Freed!" % str(int(inparse.userinput[0]))
         else:
             inparse.prompt = ["Buffer to modify", "Parameter to free"]
             inparse.inputbounds = [[firstbuffer, lastbuffer], [1, np.inf]]
             inparse.defaultinput = [firstbuffer, 1]
             if inparse.getparams():
-                free = data.matrix.buffer(int(inparse.userinput[0])).fit.free.get()
+                free = self.inst.data.matrix.buffer(int(inparse.userinput[0])).fit.free.get()
                 free[int(inparse.userinput[1]) - 1] = True
-                data.matrix.buffer(int(inparse.userinput[0])).fit.free.set(free)
+                self.inst.data.matrix.buffer(int(inparse.userinput[0])).fit.free.set(free)
                 return "Parameter " + str(int(inparse.userinput[1])) + " of buffer " + \
                        str(int(inparse.userinput[1])) + " Freed!"
             else:
@@ -1655,13 +1657,13 @@ class Command(object):
                 """
         inparse = inputprocessing.InputParser()
         inparse(args)
-        fitparams = fitfxns.datafit()
-        if data.plot_limits.is_active:
-            firstbuffer, lastbuffer = data.plot_limits.buffer_range.get()
+        fitparams = fitfxns.datafit(self.inst)
+        if self.inst.data.plot_limits.is_active:
+            firstbuffer, lastbuffer = self.inst.data.plot_limits.buffer_range.get()
         else:
-            lastbuffer = data.matrix.length()
+            lastbuffer = self.inst.data.matrix.length()
             firstbuffer = 1
-        if len(data.matrix.buffer(firstbuffer).fit.parameter.get()) < 1:
+        if len(self.inst.data.matrix.buffer(firstbuffer).fit.parameter.get()) < 1:
             return "\nNo Initial Parameters Defined! Try command: ap ."
         if "-all" in inparse.cmdflags or "all" in inparse.modifiers:
             inparse.userinput = [str(firstbuffer), str(lastbuffer)]
@@ -1680,26 +1682,26 @@ class Command(object):
         spacer = ' '*20
         table = '\n\n'
         for i in range(firstbuffer, lastbuffer+1):
-            fitparams.update(data.matrix.buffer(i).fit.function_index.get())
-            if len(data.matrix.buffer(i).fit.parameter_error.get()) != len(data.matrix.buffer(i).fit.parameter.get()):
-                data.matrix.buffer(i).fit.parameter_error.set([None] * len(data.matrix.buffer(i).fit.parameter.get()))
+            fitparams.update(self.inst.data.matrix.buffer(i).fit.function_index.get())
+            if len(self.inst.data.matrix.buffer(i).fit.parameter_error.get()) != len(self.inst.data.matrix.buffer(i).fit.parameter.get()):
+                self.inst.data.matrix.buffer(i).fit.parameter_error.set([None] * len(self.inst.data.matrix.buffer(i).fit.parameter.get()))
             temp = []
             if i == firstbuffer:
                 for val in header:
                     temp.append(val + spacer[:len(spacer) - len(val)])
                 table += ''.join(temp) + "\n" + line + "\n"
-            for j in range(len(data.matrix.buffer(i).fit.parameter.get())):
+            for j in range(len(self.inst.data.matrix.buffer(i).fit.parameter.get())):
                 if j == 0:
                     buffer = str(i)
                 else:
                     buffer = ''
-                if str(data.matrix.buffer(i).fit.free.get()[j]) == "True":
+                if str(self.inst.data.matrix.buffer(i).fit.free.get()[j]) == "True":
                     fixed = "False"
                 else:
                     fixed = "True"
-                lineout = [buffer, fitparams.paramid[j], str(data.matrix.buffer(i).fit.parameter.get()[j]),
-                           str(data.matrix.buffer(i).fit.parameter_error.get()[j]),
-                           str(data.matrix.buffer(i).fit.link.get()[j]), fixed]
+                lineout = [buffer, fitparams.paramid[j], str(self.inst.data.matrix.buffer(i).fit.parameter.get()[j]),
+                           str(self.inst.data.matrix.buffer(i).fit.parameter_error.get()[j]),
+                           str(self.inst.data.matrix.buffer(i).fit.link.get()[j]), fixed]
                 temp = []
                 for val in lineout:
                     temp.append(val + spacer[:len(spacer) - len(val)])
@@ -1721,7 +1723,7 @@ class Command(object):
 
                Notes: Derivatized data is appended to data matrix as new buffers
                """
-        matrixlen = data.matrix.length()
+        matrixlen = self.inst.data.matrix.length()
         inparse = inputprocessing.InputParser()
         inparse.prompt = ["First Buffer", "Last Buffer"]
         inparse.inputbounds = [[1, matrixlen], [1, matrixlen]]
@@ -1735,15 +1737,15 @@ class Command(object):
         min_buf = int(min(comparams))
         max_buf = int(max(comparams))
         for i in range(min_buf, max_buf+1, 1):
-            new_buffer = data.Buffer()
-            new_buffer.comments.set(data.matrix.buffer(i).comments.all_as_string() + ' (derivative)')
-            new_buffer.plot.series.name = data.matrix.buffer(i).plot.series.name + ' (derivative)'
-            new_buffer.plot.series.color.set(data.matrix.buffer(i).plot.series.color.get())
-            x, y = numericalmethods.calc_derivative(data.matrix.buffer(i).data.x.get(),
-                                                    data.matrix.buffer(i).data.y.get())
+            new_buffer = self.inst.new_buffer()
+            new_buffer.comments.set(f'{self.inst.data.matrix.buffer(i).comments.all_as_string()} Buffer{i} (derivative)')
+            new_buffer.plot.series.name.set(f'{self.inst.data.matrix.buffer(i).plot.series.name.get()} (derivative)')
+            new_buffer.plot.series.color.set(self.inst.data.matrix.buffer(i).plot.series.color.get())
+            x, y = numericalmethods.calc_derivative(self.inst.data.matrix.buffer(i).data.x.get(),
+                                                    self.inst.data.matrix.buffer(i).data.y.get())
             new_buffer.data.x.set(x)
             new_buffer.data.y.set(y)
-            data.matrix.append_new_buffer(new_buffer)
+            self.inst.data.matrix.add_buffer(new_buffer)
 
         return "\n Derivative Data for Buffer: {} through {} are written as Buffers {} through {}".format(*[min_buf, max_buf, matrixlen + 1, matrixlen + (max_buf-min_buf) + 1])
 
@@ -1762,7 +1764,7 @@ class Command(object):
 
                Notes: Integral data is appended to data matrix as new buffers
                """
-        matrixlen = data.matrix.length()
+        matrixlen = self.inst.data.matrix.length()
         inparse = inputprocessing.InputParser()
         inparse.prompt = ["First Buffer", "Last Buffer"]
         inparse.inputbounds = [[1, matrixlen], [1, matrixlen]]
@@ -1776,13 +1778,15 @@ class Command(object):
         min_buf = int(min(comparams))
         max_buf = int(max(comparams))
         for i in range(min_buf, max_buf + 1, 1):
-            new_buffer = data.Buffer()
-            new_buffer.comments.set(data.matrix(i).comments.all_as_string() + ' (integral)')
-            new_buffer.plot.series.name = data.matrix.buffer(i).plot.series.name + ' (integral)'
-            new_buffer.plot.series.color = data.matrix.buffer(i).plot.series.color
-            x, y = numericalmethods.calc_integral(data.matrix.buffer(i).data.x.get(),
-                                                  data.matrix.buffer(i).data.y.get())
-            data.matrix.append_new_buffer(new_buffer)
+            new_buffer = self.inst.new_buffer()
+            new_buffer.comments.set(f'{self.inst.data.matrix.buffer(i).comments.all_as_string()} Buffer{i} (derivative)')
+            new_buffer.plot.series.name.set(f'{self.inst.data.matrix.buffer(i).plot.series.name.get()} (derivative)')
+            new_buffer.plot.series.color.set(self.inst.data.matrix.buffer(i).plot.series.color.get())
+            x, y = numericalmethods.calc_integral(self.inst.data.matrix.buffer(i).data.x.get(),
+                                                  self.inst.data.matrix.buffer(i).data.y.get())
+            new_buffer.data.x.set(x)
+            new_buffer.data.y.set(y)
+            self.inst.data.matrix.add_buffer(new_buffer)
 
         return "\n Integral Data for Buffer: {} through {} are written as Buffers {} through {}".format(
             *[min_buf, max_buf, matrixlen + 1, matrixlen + (max_buf - min_buf) + 1])
@@ -1810,17 +1814,16 @@ class Command(object):
         if len(comparams) == 0:
             comparams.append(1)
         buf = int(comparams[0])
-        if buf > data.matrix.length():
-            buf = data.matrix.length()
+        if buf > self.inst.data.matrix.length():
+            buf = self.inst.data.matrix.length()
         if buf < 1:
             buf = 1
 
         # code to print dictionary here:
-        for key, value in data.matrix.buffer(buf).to_dict().items():
+        for key, value in self.inst.data.matrix.buffer(buf).to_dict().items():
             print(f'{str(key)}: {str(value)}')
 
         return "\n Showing Details of Buffer: " + str(buf)
-
 
     def help(self, cmd=None):
         def std_help():
@@ -1848,44 +1851,42 @@ class Command(object):
 ########################################################################################################################
 ########################################################################################################################
 
+    def updatefixlnk(self):
+        if self.inst.data.plot_limits.is_active:
+            firstbuffer, lastbuffer = self.inst.data.plot_limits.buffer_range.get()
+        else:
+            lastbuffer = self.inst.data.matrix.length()
+            firstbuffer = 1
+        for i in range(firstbuffer, lastbuffer+1):
+            if len(self.inst.data.matrix.buffer(i).fit.link.get()) != len(self.inst.data.matrix.buffer(i).fit.parameter.get()):
+                self.inst.data.matrix.buffer(i).fit.link.set([None] * len(self.inst.data.matrix.buffer(i).fit.parameter.get()))
+                self.inst.data.matrix.buffer(i).fit.free.set([True] * len(self.inst.data.matrix.buffer(i).fit.parameter.get()))
+        return True
 
-def updatefixlnk():
-    if data.plot_limits.is_active:
-        firstbuffer, lastbuffer = data.plot_limits.buffer_range.get()
-    else:
-        lastbuffer = data.matrix.length()
-        firstbuffer = 1
-    for i in range(firstbuffer, lastbuffer+1):
-        if len(data.matrix.buffer(i).fit.link.get()) != len(data.matrix.buffer(i).fit.parameter.get()):
-            data.matrix.buffer(i).fit.link.set([None] * len(data.matrix.buffer(i).fit.parameter.get()))
-            data.matrix.buffer(i).fit.free.set([True] * len(data.matrix.buffer(i).fit.parameter.get()))
-    return True
 
-
-def runscript(scriptfile, interactivemode):
-    user_input = None
-    commander = commands.Command()
-    with open(scriptfile) as script:
-        commandlist = script.readlines()
-        for command in commandlist:
-            if command[0] == "#" or command[0] == '\n':
-                continue
-            elif command[0] == "!":
-                print(command[1:])
-                continue
-            elif command[0] == "?":
-                user_input = input("\n" + command[1:] + "\nResponse: ")
-            else:
-                if user_input is not None and "[user_input]" in command:
-                    command.replace("[user_input]", str(user_input))
-                output = commander(command)
-                if output and command.lower().strip() != 'quit' and command.lower().strip() != 'q':
-                    print(output)
-                    user_input = None
+    def runscript(self, scriptfile, interactivemode):
+        user_input = None
+        with open(scriptfile) as script:
+            commandlist = script.readlines()
+            for command in commandlist:
+                if command[0] == "#" or command[0] == '\n':
+                    continue
+                elif command[0] == "!":
+                    print(command[1:])
+                    continue
+                elif command[0] == "?":
+                    user_input = input("\n" + command[1:] + "\nResponse: ")
                 else:
-                    sys.exit(0)
-            if interactivemode:
-                interactiveinput = input("\nPress [q] to stop script, any other key to continue:  ")
-                if interactiveinput.lower() == "q":
-                    break
-    return "\nScript Executed Successfully!"
+                    if user_input is not None and "[user_input]" in command:
+                        command.replace("[user_input]", str(user_input))
+                    output = self(command)
+                    if output and command.lower().strip() != 'quit' and command.lower().strip() != 'q':
+                        print(output)
+                        user_input = None
+                    else:
+                        sys.exit(0)
+                if interactivemode:
+                    interactiveinput = input("\nPress [q] to stop script, any other key to continue:  ")
+                    if interactiveinput.lower() == "q":
+                        break
+        return "\nScript Executed Successfully!"
