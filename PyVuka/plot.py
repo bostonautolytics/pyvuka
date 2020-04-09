@@ -26,18 +26,28 @@ class plotter(object):
         self.__resid_ax = False
         self.__scatter_ax = False
         self.__scatter_fig = False
+        self.__plot = None
+        self.__startplot = None
         self.inst = data_instance
 
     def __call__(self, pltarray, *args, **kwargs):
         print("Plotting...")
+        pl.close('all')
         return_bytes = False
         scan = False
         auto = False
         delay = 0.5
-        start_plot = None
         dpi = 50
         tight = True
-        plot = None
+        self.__global_xlim = (-0.1, 0.1)
+        self.__global_ylim = (-0.1, 0.1)
+        self.__global_ylim_resid = (-0.1, 0.1)
+        self.__resid_ax = False
+        self.__scatter_ax = False
+        self.__scatter_fig = False
+        self.__plot = None
+        self.__startplot = None
+
 
         if 'get_bytes' in kwargs:
             return_bytes = bool(kwargs['get_bytes'])
@@ -65,13 +75,13 @@ class plotter(object):
             # determine plot type, and call correct routine
             plot_type = self.__get_plot_type(buffer)
             if plot_type == 'heatmap':
-                plot = self.__heatmap(buffer, *args, **kwargs)
+                self.__plot = self.__heatmap(buffer, *args, **kwargs)
             else:
                 # scatter/line plots can be superimposed so plot has to be initialized outside of plotting method to permit stacking
                 if i == 0:
-                    start_plot = pl.subplots(nrows=1, ncols=1, figsize=(8, 6), sharey=True, sharex=True)
+                    self.__start_plot = pl.subplots(nrows=1, ncols=1, figsize=(8, 6), sharey=True, sharex=True)
                     # pl.close('all')
-                start_plot, plot = self.__scatterline(buffer_number, start_plot, plot_type, *args, **kwargs)
+                self.__start_plot, self.__plot = self.__scatterline(buffer_number, plot_type, *args, **kwargs)
                 if not auto:
                     print(f"Displaying Buffer {buffer_number}")
 
@@ -90,7 +100,7 @@ class plotter(object):
 
         # if return bytes requested, return bytes
         if return_bytes:
-            return self.__get_byte_png(plot, dpi=dpi, tight=tight)
+            return self.__get_byte_png(self.__plot, dpi=dpi, tight=tight)
         return "Plotting Complete"
 
     def __get_plot_type(self, buffer):
@@ -188,7 +198,7 @@ class plotter(object):
         fig.canvas.flush_events()
         return pl
 
-    def __scatterline(self, buffer_number, start_plot, plot_type, *args, **kwargs):
+    def __scatterline(self, buffer_number, plot_type, *args, **kwargs):
         buffer = self.inst.matrix._Matrix__buffer_list[buffer_number-1]
         black_models = False
         scan = False
@@ -244,9 +254,9 @@ class plotter(object):
         #####################################
         if scan: # if scan create new figure each iteration
             pass
-            # start_plot = pl.subplots(nrows=1, ncols=1, figsize=(8, 6), sharey=True, sharex=True)
+            # self.__start_plot = pl.subplots(nrows=1, ncols=1, figsize=(8, 6), sharey=True, sharex=True)
         if not self.__scatter_ax:
-            self.__scatter_fig, self.__scatter_ax = start_plot
+            self.__scatter_fig, self.__scatter_ax = self.__start_plot
             self.__scatter_ax.plot(1, 1)
             self.__scatter_ax.set_xscale(x_axis_type)
             self.__scatter_ax.set_yscale(y_axis_type)
@@ -411,10 +421,12 @@ class plotter(object):
         return [self.__scatter_fig, self.__scatter_ax], pl
 
     def __get_byte_png(self, pl, dpi=50, tight=True):
+        global is_savefig
         BIOstream = BIO()
-        if tight:
-            pl.tight_layout()
+        is_savefig = True
         pl.savefig(BIOstream, format='png', dpi=dpi, bbox_inches='tight')
+        pl.close('all')
+        is_savefig = False
         BIOstream.seek(0)
         im = Image.open(BIOstream)
         im2 = im.convert('RGB').convert('P', palette=Image.ADAPTIVE)
@@ -423,7 +435,7 @@ class plotter(object):
         im2.save(BIOstream, format='PNG', quality=95)
         BIOstream.seek(0)
         byte_png = BIOstream.getvalue()
-        pl.close()
+        pl.close('all')
         return byte_png
 
     def __sort_by_z(self, X, Y, Z):

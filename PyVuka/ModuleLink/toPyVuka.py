@@ -19,7 +19,7 @@
 # The PyVuka data buffer matrix is a list of object_buffer dictionaries
 #
 #######################################################################################################################
-from .. import commands, plot, data_obj as data
+from .. import commands, plot, data_obj
 from PIL import Image
 from io import BytesIO as BIO
 import os
@@ -31,9 +31,8 @@ def initialize_instance():
 
 class new_instance:
     def __init__(self):
-        self.data = data.init()
+        self.data = data_obj.init()
         self.plot = plot.plotter(self.data)
-        self.commands = commands
 
     def clear_all(self):
         self.data = data.init()
@@ -152,10 +151,10 @@ class new_instance:
             except:
                 pass
 
-        #try:
-        return self.plot(list_of_datamatrix_idicies, get_bytes=False, dpi=dpi, tight=tight, black_models=black_models)
-        #except Exception as e:
-        #    raise Exception(f'Could not generate plot:\n\t{str(e)}')
+        try:
+            return self.plot(list_of_datamatrix_idicies, get_bytes=False, dpi=dpi, tight=tight, black_models=black_models)
+        except Exception as e:
+            raise Exception(f'Could not generate plot:\n\t{str(e)}')
 
     def get_plot_as_bytestring(self, list_of_datamatrix_idicies, *args, **kwargs):
         list_of_datamatrix_idicies = self.__single_int_to_list(list_of_datamatrix_idicies)
@@ -179,9 +178,8 @@ class new_instance:
             except:
                 pass
 
-        img = plot.plotter(self.data)
         try:
-            return BIO(img(list_of_datamatrix_idicies, get_bytes=True, dpi=dpi, tight=tight, black_models=black_models))
+            return BIO(self.plot(list_of_datamatrix_idicies, get_bytes=True, dpi=dpi, tight=tight, black_models=black_models))
         except Exception as e:
             raise Exception(f'Could not generate plot:\n\t{str(e)}')
 
@@ -214,7 +212,6 @@ class new_instance:
         if not isinstance(native_pyvuka_command, str):
             raise ValueError(f'PyVuka command is not a valid string object!')
         try:
-            commander = commands.Command(self)
-            return commander(native_pyvuka_command)
+            return commands.Command(self)(native_pyvuka_command)
         except Exception as e:
             raise ValueError(f'Invalid PyVuka command!\n\t{str(e)}')
