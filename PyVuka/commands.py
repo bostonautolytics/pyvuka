@@ -776,7 +776,7 @@ class Command(object):
         if not inparse.getparams():
             return"\nNo Data Was Trimmed!"
 
-        firstbuffer, lastbuffer, indexi, indexf = [int(x) for x in inparse.userinput]
+        firstbuffer, lastbuffer, indexi, indexf = [int(float(x)) for x in inparse.userinput]
         for i in range(firstbuffer, lastbuffer + 1):
             buffer = self.inst.data.matrix.buffer(i)
 
@@ -845,12 +845,15 @@ class Command(object):
             # add const to Z axis
             if "-z" in inparse.cmdflags:
                 buffer.data.z.set(buffer.data.z.get() + const)
+                buffer.plot.axis.z.lines.set(buffer.plot.axis.z.lines.get() + const)
             # add const to Y axis
             if "-y" in inparse.cmdflags:
                 buffer.data.y.set(buffer.data.y.get() + const)
+                buffer.plot.axis.y.lines.set(buffer.plot.axis.y.lines.get() + const)
             # add const to X axis if specified or as default with no flags
             if ("-x" in inparse.cmdflags) or ("-y" not in inparse.cmdflags and "-z" not in inparse.cmdflags):
                 buffer.data.x.set(buffer.data.x.get() + const)
+                buffer.plot.axis.x.lines.set(buffer.plot.axis.x.lines.get() + const)
         return '\nData Successfully Shifted!'
 
     def do_mul(self, *args):
@@ -1890,3 +1893,4 @@ class Command(object):
                     if interactiveinput.lower() == "q":
                         break
         return "\nScript Executed Successfully!"
+

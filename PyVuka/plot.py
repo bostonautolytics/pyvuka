@@ -321,7 +321,7 @@ class plotter(object):
                         path_effects=[pe.Stroke(linewidth=series_weight / 2.5, foreground='k'), pe.Normal()],
                         zorder=1)
             # residuals plot
-            if len(X_resid) > 0:
+            if len(X_resid) > 0 and None not in (min(y_resid_axis_range), max(y_resid_axis_range)):
                 if not self.__resid_ax:
                     divider = make_axes_locatable(self.__scatter_ax)
                     self.__resid_ax = divider.append_axes("bottom", size="20%", pad=0)

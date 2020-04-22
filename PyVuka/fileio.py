@@ -470,13 +470,16 @@ class IO(object):
                     newbuffer.data.x.append(segment)
                     newbuffer.plot.axis.x.lines.append(segment[0])
 
-                for segment in Ydata:
-                    newbuffer.data.y.append(segment)
+                for j, segment in enumerate(Ydata):
+                    signal_shift = 0.0
+                    if j > 0:
+                        signal_shift = segment[0]-Ydata[j-1][-1]
+                    newbuffer.data.y.append(segment - signal_shift)
 
                 newbuffer.data.z.set([float(MolarConcentration[-2])] * newbuffer.data.y.length())
 
-                newbuffer.comments.set([SensorInfo + " on " + SensorType + " vs " +
-                                           SampleID[-2] + " @ " + MolarConcentration[-2] + "nM"])
+                newbuffer.comments.set([str(SensorInfo) + " on " + str(SensorType) + " vs " +
+                                           str(SampleID[-2]) + " @ " + str(MolarConcentration[-2]) + "nM"])
                 newbuffer.plot.series.name.set(newbuffer.comments.get())
                 newbuffer.plot.title.set(newbuffer.comments.get())
                 newbuffer.plot.axis.x.title.set("Time (s)")
@@ -729,7 +732,4 @@ def predict_encoding(file_path, n_lines=20):
         # Join binary lines for specified number of lines
         rawdata = b''.join([f.readline() for _ in range(n_lines)])
     return chardet.detect(rawdata)['encoding']
-
-
-
 
