@@ -485,6 +485,13 @@ class IO(object):
                 newbuffer.plot.axis.x.title.set("Time (s)")
                 newbuffer.plot.axis.y.title.set("Response (nm)")
                 newbuffer.plot.axis.x.lines.show()
+                newbuffer.meta_dict = {'xData': Xdata, 'yData': Ydata, 'stepName': StepName, 'actualTime': ActualTime,
+                       'stepStatus': StepStatus, 'stepType': StepType, 'concentration': Concentration,
+                       'molarConcentration':MolarConcentration, 'sampleID':SampleID,
+                       'wellType': WellType, 'mw': MW, 'flags':Flags, 'sampleGroup': SampleGroup,
+                       'stepLocation': StepLoc, 'loadingSample': loadingsample,
+                       'loadingStart':loadingstart, 'loadingEnd':loadingend, 'loadingWell':loadingwell,
+                       'inFile':infile}
                 self.data.matrix.add_buffer(newbuffer)
         self.colorallseries()
         return "ForteBio data read into memory."
