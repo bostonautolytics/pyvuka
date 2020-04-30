@@ -231,7 +231,7 @@ class plotter(object):
         show_x_lines = buffer.plot.axis.x.lines.is_visible
         x_lines = buffer.plot.axis.x.lines.get()
         show_y_lines = buffer.plot.axis.y.lines.is_visible
-        y_lines = buffer.plot.axis.x.lines.get()
+        y_lines = buffer.plot.axis.y.lines.get()
         show_peaks = buffer.plot.axis.y.peaks.is_visible
         peak_indicies = buffer.plot.axis.y.peaks.get()
         peaks = [Y[p] for p in peak_indicies]
@@ -315,10 +315,10 @@ class plotter(object):
         # __________________________________#
         if len(X_model) > 0:
             if black_models:
-                self.__scatter_ax.plot(X_model, Y_model, linestyle='-', color='k', linewidth=series_weight / 5, zorder=1)
+                self.__scatter_ax.plot(X_model, Y_model, linestyle='-', color='#000000', linewidth=series_weight / 5, zorder=1)
             else:
                 self.__scatter_ax.plot(X_model, Y_model, linestyle='-', color=series_color, linewidth=series_weight / 5,
-                        path_effects=[pe.Stroke(linewidth=series_weight / 2.5, foreground='k'), pe.Normal()],
+                        path_effects=[pe.Stroke(linewidth=series_weight / 2.5, foreground='#000000'), pe.Normal()],
                         zorder=1)
             # residuals plot
             if len(X_resid) > 0 and None not in (min(y_resid_axis_range), max(y_resid_axis_range)):
@@ -334,7 +334,7 @@ class plotter(object):
                     # Set x bounds to match data plot
                     pl.xlim(min(x_axis_range), max(x_axis_range))
                     pl.xlabel(x_axis_title)
-                    self.__resid_ax.axhline(y=0, linestyle='-', color='k', linewidth=2, zorder=0)
+                    self.__resid_ax.axhline(y=0, linestyle='-', color='#000000', linewidth=2, zorder=0)
                     self.__resid_ax.grid()
                     pl.ylabel('Residuals')
                 self.__resid_ax.set_ylim(min(y_resid_axis_range), max(y_resid_axis_range))
@@ -348,12 +348,12 @@ class plotter(object):
         # ___________________________________#
         if show_x_lines and len(x_lines) >= 1:
             for line in x_lines:
-                self.__scatter_ax.axvline(x=line, linestyle='--', color='gray', linewidth=series_weight / 5, zorder=2,
-                           path_effects=[pe.Stroke(linewidth=series_weight / 2.5, foreground='k'), pe.Normal()])
+                self.__scatter_ax.axvline(x=line, linestyle='--', color='#808080', linewidth=series_weight / 5, zorder=2,
+                           path_effects=[pe.Stroke(linewidth=series_weight / 2.5, foreground='#000000'), pe.Normal()])
         if show_y_lines and len(y_lines) >= 1:
             for line in y_lines:
-                self.__scatter_ax.axhline(y=line, linestyle='--', color='gray', linewidth=series_weight / 5, zorder=2,
-                           path_effects=[pe.Stroke(linewidth=series_weight / 2.5, foreground='k'), pe.Normal()])
+                self.__scatter_ax.axhline(y=line, linestyle='--', color='#808080', linewidth=series_weight / 5, zorder=2,
+                           path_effects=[pe.Stroke(linewidth=series_weight / 2.5, foreground='#000000'), pe.Normal()])
         # ___________________________________#
         #  END X-line and Y-line Plotting   #
         #####################################
@@ -367,7 +367,7 @@ class plotter(object):
             for p in peak_indicies:
                 peak_x.append(X[p])
                 peak_y.append(Y[p])
-            self.__scatter_ax.plot(peak_x, peak_y, "d", markerfacecolor='gainsboro', markeredgecolor='k', zorder=3)
+            self.__scatter_ax.plot(peak_x, peak_y, "d", markerfacecolor='#808080', markeredgecolor='#000000', zorder=3)
         if show_peak_bounds and len(peak_bounds_indicies) >= 1:
             peak_bound_x = []
             peak_bound_y = []
@@ -378,7 +378,7 @@ class plotter(object):
                 peak_bound_y.append(Y[p_start])
                 peak_bound_x.append(X[p_end])
                 peak_bound_y.append(Y[p_end])
-            self.__scatter_ax.plot(peak_bound_x, peak_bound_y, "d", markerfacecolor='gainsboro', markeredgecolor='k', zorder=3)
+            self.__scatter_ax.plot(peak_bound_x, peak_bound_y, "d", markerfacecolor='#808080', markeredgecolor='#000000', zorder=3)
         # ___________________________________#
         #       END Peak Plotting           #
         #####################################
@@ -399,7 +399,7 @@ class plotter(object):
                 int_start = (X[int_indx[0]], Y[int_indx[0]])
                 int_end = (X[int_indx[-1]], Y[int_indx[-1]])
                 verts = [(int_start[0], 0)] + xy_vals[int_indx[0]:int_indx[1]] + [(int_end[0], 0)]
-                poly = matplotlib.patches.Polygon(verts, facecolor=int_color, edgecolor='gainsboro', zorder=0)
+                poly = matplotlib.patches.Polygon(verts, facecolor=int_color, edgecolor='#808080', zorder=0)
                 self.__scatter_ax.add_patch(poly)
         # ___________________________________#
         #     END  Integral  Plotting       #
@@ -411,7 +411,7 @@ class plotter(object):
         if show_polygons and len(polygon_verticies) >= 1:
             for polygon in polygon_verticies:
                 poly_x, poly_y = zip(*polygon)
-                self.__scatter_ax.plot(poly_x, poly_y, linestyle='-', color='gainsboro', linewidth=series_weight / 5, zorder=4,
+                self.__scatter_ax.plot(poly_x, poly_y, linestyle='-', color='#808080', linewidth=series_weight / 5, zorder=4,
                         path_effects=[pe.Stroke(linewidth=series_weight / 2.5, foreground='k'), pe.Normal()])
         # ___________________________________#
         #       END  Polygon Plotting       #
