@@ -236,9 +236,7 @@ class plotter(object):
         peak_indicies = buffer.plot.axis.y.peaks.get()
         peaks = [Y[p] for p in peak_indicies]
         show_peak_bounds = buffer.plot.axis.y.peak_bounds.is_visible
-        peak_bounds = buffer.plot.axis.y.peak_bounds.get()
-        peak_bounds_indicies = [tuple([buffer.data.y.nearest_index_to_value(p[0]),
-                                buffer.data.y.nearest_index_to_value(p[-1])]) for p in peak_bounds]
+        peak_bounds_indicies = buffer.plot.axis.y.peak_bounds.get()
         show_integrals = buffer.plot.axis.x.integrals.is_visible
         integral_indicies_pairs = buffer.plot.axis.x.integrals.get()
         show_polygons = buffer.plot.polygons.is_visible
