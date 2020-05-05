@@ -133,7 +133,7 @@ class new_instance:
         list_of_datamatrix_idicies = self.__single_int_to_list(list_of_datamatrix_idicies)
         dpi = 50
         tight = True
-        black_models = True
+        black_models = False
 
         if 'dpi' in kwargs:
             try:
@@ -160,7 +160,7 @@ class new_instance:
         list_of_datamatrix_idicies = self.__single_int_to_list(list_of_datamatrix_idicies)
         dpi = 50
         tight = True
-        black_models = True
+        black_models = False
 
         if 'dpi' in kwargs:
             try:
