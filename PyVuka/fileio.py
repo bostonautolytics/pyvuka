@@ -403,7 +403,6 @@ class IO(object):
 
         for files in os.listdir(experimentdirectory):
             if files.endswith('.frd'):
-                ignoreregenerationaandneutralization = False
                 Xdata = []
                 Ydata = []
                 StepName = []
@@ -433,11 +432,6 @@ class IO(object):
                         for commondata in stepdata.findall('CommonData'):
 
                             WellType.append(commondata.find('WellType').text)
-                            if ignoreregenerationaandneutralization:
-                                if WellType[-1].upper() == 'REGENERATION' or WellType[-1] == 'NEUTRALIZATION':
-                                    WellType.pop()
-                                    continue
-
                             Concentration.append(commondata.find('Concentration').text)
                             MolarConcentration.append(commondata.find('MolarConcentration').text)
                             SampleID.append(commondata.find('SampleID').text)
@@ -445,7 +439,6 @@ class IO(object):
                                 SampleGroup.append(commondata.find('SampleGroup').text)
                             else:
                                 SampleGroup.append(None)
-                            WellType.append(commondata.find('WellType').text)
                             MW.append(commondata.find('MolecularWeight').text)
                             Xdata.append(np.array(array.array('f', base64.b64decode(stepdata.find('AssayXData').text))))
                             Ydata.append(np.array(array.array('f', base64.b64decode(stepdata.find('AssayYData').text))))
@@ -485,14 +478,14 @@ class IO(object):
                 newbuffer.plot.axis.x.title.set("Time (s)")
                 newbuffer.plot.axis.y.title.set("Response (nm)")
                 newbuffer.plot.axis.x.lines.show()
-                newbuffer.meta_dict = {'xData': newbuffer.data.x.get(), 'yData': newbuffer.data.y.get(),
+                newbuffer.meta_dict = {'xData': Xdata, 'yData': Ydata,
                                        'stepName': StepName, 'actualTime': ActualTime, 'sensorType': SensorType,
                                        'stepStatus': StepStatus, 'stepType': StepType, 'concentration': Concentration,
                                        'molarConcentration':MolarConcentration, 'sampleID':SampleID,
                                        'wellType': WellType, 'mw': MW, 'flags':Flags, 'sampleGroup': SampleGroup,
                                        'stepLocation': StepLoc, 'loadingSample': loadingsample, 'sensorInfo': SensorInfo,
                                        'loadingStart':loadingstart, 'loadingEnd':loadingend, 'loadingWell':loadingwell,
-                                       'inFile':infile}
+                                       'inFile':infile, 'sensorName':SensorName}
                 self.data.matrix.add_buffer(newbuffer)
         self.colorallseries()
         return "ForteBio data read into memory."
