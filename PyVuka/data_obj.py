@@ -326,7 +326,26 @@ class Buffer(object):
             self.ye = self._base_array()
             self.z = self._base_array()
             self.ze = self._base_array()
+            self.color = self._base_color()
+            self.is_visible = True
+            self.weight = self._base_weight()
 
+        def show(self, yes=True) -> bool:
+            self.is_visible = True if yes is True else False
+
+        def hide(self, yes=True) -> bool:
+            self.is_visible = False if yes is True else True
+
+        class _base_weight(object):
+            def __init__(self):
+                self.__weight = -1
+
+            def get(self) -> int:
+                return self.__weight
+
+            def set(self, user_input: int):
+                self.__weight = user_input
+            
         class _base_array(object):
             def __init__(self):
                 self.__base = np.array([])
@@ -429,6 +448,18 @@ class Buffer(object):
 
             def value_at_index(self, index: int) -> float:
                 return float(self.__base[index]) if index <= len(self.__base) else None
+
+        class _base_color(object):
+            def __init__(self):
+                self.__color_val = '#000000' # black
+
+            def set(self, color):
+                self.__color_val = color
+
+            def get(self):
+                if len(str(self.__color_val)) > 0 and str(self.__color_val)[0] == '(' and str(self.__color_val)[-1] == ')':
+                    return tuple(self.__color_val)
+                return self.__color_val
 
     class __BaseCategory(object):
         def __init__(self):
@@ -598,7 +629,7 @@ class Buffer(object):
 
             class _base_color(object):
                 def __init__(self):
-                    self.__color_val = 'r'
+                    self.__color_val = '#FF0000' # red
 
                 def set(self, color):
                     self.__color_val = color
@@ -685,6 +716,33 @@ class Buffer(object):
                     self.peaks = self.__base_nparray()
                     self.peak_bounds = self.__base_list()
                     self.integrals = self.__base_list()
+                    self.label = self.__base_label()
+
+                class __base_label(object):
+                    def __init__(self):
+                        self.size = self.__size()
+                        self.is_visible = self.show()
+
+                    def show(self, yes=True) -> bool:
+                        self.is_visible = yes
+                        return self.is_visible
+
+                    def hide(self, yes=True) -> bool:
+                        self.is_visible = False if yes is True else True
+                        return self.is_visible
+
+                    class __size(object):
+                        def __init__(self):
+                            self.__size = 10
+
+                        def get(self) -> np.array:
+                            return self.__size
+
+                        def set(self, user_input):
+                            if type(user_input) in [int, float]:
+                                self.__size = int(user_input) if int(user_input) > 0 else 8
+                            else:
+                                raise ValueError(f"Invalid parameter type: {type(user_input)}; Expecting int type!")
 
                 class __base_nparray(object):
                     def __init__(self):
