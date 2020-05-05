@@ -138,8 +138,11 @@ class plotter(object):
         X_cat = buffer.category.x.get()
         Y_cat = buffer.category.y.get()
         X_title = buffer.plot.axis.x.title.get()
+        X_title_size = buffer.plot.axis.x.label.size.get()
         Y_title = buffer.plot.axis.y.title.get()
+        Y_title_size = buffer.plot.axis.y.label.size.get()
         Z_title = buffer.plot.axis.z.title.get()
+        Z_title_size = buffer.plot.axis.z.label.size.get()
         plot_title = buffer.plot.title.get()
 
         X_axis = X if not X_cat else X_cat
@@ -148,9 +151,9 @@ class plotter(object):
         data = Z.reshape((len(Y_axis), len(X_axis)))
 
         fig, ax = pl.subplots()
-        pl.rcParams["font.size"] = 10
-        pl.gca().tick_params(axis='y', pad=8)
-        pl.gca().tick_params(axis='x', pad=8)
+        pl.rcParams["font.size"] = min(X_title_size, Y_title_size)
+        pl.gca().tick_params(axis='y', pad=8, labelsize=Y_title_size)
+        pl.gca().tick_params(axis='x', pad=8, labelsize=X_title_size)
 
         # Plot the heatmap
         im = ax.imshow(data, cmap=matplotlib.cm.rainbow)
@@ -161,8 +164,8 @@ class plotter(object):
         # ... and label them with the respective list entries.
         ax.set_xticklabels(X_axis)
         ax.set_yticklabels(Y_axis)
-        pl.xlabel(X_title)
-        pl.ylabel(Y_title)
+        pl.xlabel(X_title, size=X_title_size)
+        pl.ylabel(Y_title, size=Y_title_size)
 
         # Let the horizontal axes labeling appear on top.
         ax.tick_params(top=True, bottom=False,
@@ -217,17 +220,28 @@ class plotter(object):
         YE = buffer.data.ye.get()
         Z = buffer.data.z.get()
         ZE = buffer.data.ze.get()
+        show_data = buffer.data.is_visible
         X_model = buffer.model.x.get()
         Y_model = buffer.model.y.get()
         Z_model = buffer.model.z.get()
+        model_color = buffer.model.color.get()
+        show_model = buffer.model.is_visible
         X_resid = buffer.residuals.x.get()
         Y_resid = buffer.residuals.y.get()
         Z_resid = buffer.residuals.z.get()
+        show_residuals = buffer.residuals.is_visible
         series_color = matplotlib.colors.to_hex(buffer.plot.series.color.get() if buffer.plot.series.color.get() != '' else 'r', keep_alpha=True)
-        series_weight = buffer.plot.series.weight.get()
+        data_weight = buffer.plot.series.weight.get() if buffer.data.weight.get() <= 0 else buffer.data.weight.get()
+        model_weight = data_weight/5 if buffer.model.weight.get() <= 0 else buffer.model.weight.get() 
         x_axis_title = buffer.plot.axis.x.title.get()
         y_axis_title = buffer.plot.axis.y.title.get()
         z_axis_title = buffer.plot.axis.z.title.get()
+        x_title_size = buffer.plot.axis.x.label.size.get()
+        y_title_size = buffer.plot.axis.y.label.size.get()
+        z_title_size = buffer.plot.axis.z.label.size.get()
+        x_title_show = buffer.plot.axis.x.label.is_visible
+        y_title_show = buffer.plot.axis.y.label.is_visible
+        z_title_show = buffer.plot.axis.z.label.is_visible
         show_x_lines = buffer.plot.axis.x.lines.is_visible
         x_lines = buffer.plot.axis.x.lines.get()
         show_y_lines = buffer.plot.axis.y.lines.is_visible
@@ -260,10 +274,12 @@ class plotter(object):
             self.__scatter_ax.set_yscale(y_axis_type)
             self.__scatter_ax.grid()
             pl.rcParams["font.size"] = 10
-            pl.gca().tick_params(axis='y', pad=8)
-            pl.gca().tick_params(axis='x', pad=8)
-            pl.xlabel(x_axis_title)
-            pl.ylabel(y_axis_title)
+            pl.gca().tick_params(axis='y', pad=8, labelsize=y_title_size)
+            pl.gca().tick_params(axis='x', pad=8, labelsize=x_title_size)
+            if x_title_show:
+                pl.xlabel(x_axis_title, size=x_title_size)
+            if y_title_show:
+                pl.ylabel(y_axis_title, size=y_title_size)
 
         if not scan and len(x_axis_range) > 0:
             # do nothing
@@ -297,61 +313,70 @@ class plotter(object):
         # If Z data, treat as heatmap scatter
         if len(Z) == 0 or len(set(Z)) == 1:
             if plot_type == 'scatter':
-                self.__scatter_ax.scatter(X, Y, color=series_color, s=series_weight * 4, zorder=0)  # weight is by area, correct to height val
+                self.__scatter_ax.scatter(X, Y, color=series_color, s=data_weight * 4, zorder=0)  # weight is by area, correct to height val
             else:
-                self.__scatter_ax.plot(X, Y, color=series_color, linestyle='-', linewidth=series_weight, zorder=0)
+                self.__scatter_ax.plot(X, Y, color=series_color, linestyle='-', linewidth=data_weight, zorder=0)
         else:
             # color points by z value and sort to not obscure data in plot
             sorted_X, sorted_Y, sorted_Z = self.__sort_by_z(X, Y, Z)
             if plot_type == 'scatter':
-                self.__scatter_ax.scatter(sorted_X, sorted_Y, c=sorted_Z, s=series_weight * 4, cmap=matplotlib.cm.rainbow, zorder=0)  # weight is by area, correct to height val
+                self.__scatter_ax.scatter(sorted_X, sorted_Y, c=sorted_Z, s=data_weight * 4, cmap=matplotlib.cm.rainbow, zorder=0)  # weight is by area, correct to height val
             else:
-                self.__scatter_ax.plot(sorted_X, sorted_Y, c=sorted_Z, linestyle='-', linewidth=series_weight, cmap=matplotlib.cm.rainbow, zorder=0)
+                self.__scatter_ax.plot(sorted_X, sorted_Y, c=sorted_Z, linestyle='-', linewidth=data_weight, cmap=matplotlib.cm.rainbow, zorder=0)
+
+        #####################################
+        #            Model Plot             #
+        # __________________________________#
+        if len(X_model) > 0 and show_model:
+            if black_models:
+                self.__scatter_ax.plot(X_model, Y_model, linestyle='-', color='#000000', linewidth=model_weight, zorder=1)
+            elif model_color == series_color:
+                self.__scatter_ax.plot(X_model, Y_model, linestyle='-', color=series_color, linewidth=model_weight,
+                        path_effects=[pe.Stroke(linewidth=model_weight *2, foreground='#000000'), pe.Normal()],
+                        zorder=1)
+            else:
+                self.__scatter_ax.plot(X_model, Y_model, linestyle='-', color=model_color, linewidth=model_weight,
+                                       zorder=1)
+        #___________________________________#
+        #        END Model Plot             #
+        #####################################
 
         #####################################
         #            Residual Plot          #
         # __________________________________#
-        if len(X_model) > 0:
-            if black_models:
-                self.__scatter_ax.plot(X_model, Y_model, linestyle='-', color='#000000', linewidth=series_weight / 5, zorder=1)
-            else:
-                self.__scatter_ax.plot(X_model, Y_model, linestyle='-', color=series_color, linewidth=series_weight / 5,
-                        path_effects=[pe.Stroke(linewidth=series_weight / 2.5, foreground='#000000'), pe.Normal()],
-                        zorder=1)
-            # residuals plot
-            if len(X_resid) > 0 and None not in (min(y_resid_axis_range), max(y_resid_axis_range)):
-                if not self.__resid_ax:
-                    divider = make_axes_locatable(self.__scatter_ax)
-                    self.__resid_ax = divider.append_axes("bottom", size="20%", pad=0)
-                    self.__scatter_ax.figure.add_axes(self.__resid_ax)
-                    self.__resid_ax.set_xscale(x_axis_type)
-                    self.__resid_ax.set_yscale(y_axis_type)
-                    # end residuals plot
-                    self.__scatter_ax.set_xticklabels([])
-                    pl.gca().yaxis.set_major_locator(MaxNLocator(prune='upper'))
-                    # Set x bounds to match data plot
-                    pl.xlim(min(x_axis_range), max(x_axis_range))
-                    pl.xlabel(x_axis_title)
-                    self.__resid_ax.axhline(y=0, linestyle='-', color='#000000', linewidth=2, zorder=0)
-                    self.__resid_ax.grid()
-                    pl.ylabel('Residuals')
-                self.__resid_ax.set_ylim(min(y_resid_axis_range), max(y_resid_axis_range))
-                self.__resid_ax.plot(X_resid, Y_resid, linestyle='-', color=series_color, linewidth=series_weight / 5)
-        # ___________________________________#
+        if len(X_resid) > 0 and None not in (min(y_resid_axis_range), max(y_resid_axis_range)) and show_residuals:
+            if not self.__resid_ax:
+                divider = make_axes_locatable(self.__scatter_ax)
+                self.__resid_ax = divider.append_axes("bottom", size="20%", pad=0)
+                self.__scatter_ax.figure.add_axes(self.__resid_ax)
+                self.__resid_ax.set_xscale(x_axis_type)
+                self.__resid_ax.set_yscale(y_axis_type)
+                # end residuals plot
+                self.__scatter_ax.set_xticklabels([])
+                pl.gca().yaxis.set_major_locator(MaxNLocator(prune='upper'))
+                # Set x bounds to match data plot
+                pl.xlim(min(x_axis_range), max(x_axis_range))
+                pl.xlabel(x_axis_title, size=x_title_size)
+                self.__resid_ax.axhline(y=0, linestyle='-', color='#000000', linewidth=2, zorder=0)
+                self.__resid_ax.grid()
+                pl.ylabel('Residuals')
+            self.__resid_ax.set_ylim(min(y_resid_axis_range), max(y_resid_axis_range))
+            self.__resid_ax.plot(X_resid, Y_resid, linestyle='-', color=series_color, linewidth=model_weight)
+        #___________________________________#
         #        END Residual Plot          #
         #####################################
 
         #####################################
         #     X-line and Y-line Plotting    #
-        # ___________________________________#
+        #___________________________________#
         if show_x_lines and len(x_lines) >= 1:
             for line in x_lines:
-                self.__scatter_ax.axvline(x=line, linestyle='--', color='#808080', linewidth=series_weight / 5, zorder=2,
-                           path_effects=[pe.Stroke(linewidth=series_weight / 2.5, foreground='#000000'), pe.Normal()])
+                self.__scatter_ax.axvline(x=line, linestyle='--', color='#808080', linewidth=data_weight, zorder=2,
+                           path_effects=[pe.Stroke(linewidth=data_weight * 2, foreground='#000000'), pe.Normal()])
         if show_y_lines and len(y_lines) >= 1:
             for line in y_lines:
-                self.__scatter_ax.axhline(y=line, linestyle='--', color='#808080', linewidth=series_weight / 5, zorder=2,
-                           path_effects=[pe.Stroke(linewidth=series_weight / 2.5, foreground='#000000'), pe.Normal()])
+                self.__scatter_ax.axhline(y=line, linestyle='--', color='#808080', linewidth=data_weight, zorder=2,
+                           path_effects=[pe.Stroke(linewidth=data_weight * 2, foreground='#000000'), pe.Normal()])
         # ___________________________________#
         #  END X-line and Y-line Plotting   #
         #####################################
@@ -409,8 +434,8 @@ class plotter(object):
         if show_polygons and len(polygon_verticies) >= 1:
             for polygon in polygon_verticies:
                 poly_x, poly_y = zip(*polygon)
-                self.__scatter_ax.plot(poly_x, poly_y, linestyle='-', color='#808080', linewidth=series_weight / 5, zorder=4,
-                        path_effects=[pe.Stroke(linewidth=series_weight / 2.5, foreground='k'), pe.Normal()])
+                self.__scatter_ax.plot(poly_x, poly_y, linestyle='-', color='#808080', linewidth=data_weight, zorder=4,
+                        path_effects=[pe.Stroke(linewidth=data_weight * 2, foreground='k'), pe.Normal()])
         # ___________________________________#
         #       END  Polygon Plotting       #
         #####################################
