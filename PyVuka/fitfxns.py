@@ -492,7 +492,7 @@ for j in range(len(X)):
             IRX = self.inst.data.matrix.buffer(i).instrument_response.x.get()
             IRY = self.inst.data.matrix.buffer(i).instrument_response.y.get()
             IRZ = self.inst.data.matrix.buffer(i).instrument_response.z.get()
-            weights = self.inst.data.matrix.buffer(i).data.ye.get()
+            weights = np.reciprocal(self.inst.data.matrix.buffer(i).data.ye.get())
 
             # Fit the data
             fxn = self.inst.data.matrix.buffer(i).fit.function.get()
