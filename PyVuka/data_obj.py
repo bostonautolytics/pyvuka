@@ -145,7 +145,7 @@ class Data(object):
             buffer_idx = buffer_number - 1
             if buffer_idx not in range(len(self.__buffer_list)):
                 buf_idx_lst = list(range(len(self.__buffer_list)))
-                first = buf_idx_lst[0]+1
+                first = buf_idx_lst[0] + 1
                 last = buf_idx_lst[-1] + 1
                 raise ValueError(f"Buffer number: {buffer_number} is not in range of data matrix: {first} - {last}")
 
@@ -199,18 +199,18 @@ class Data(object):
                 return
             for i in range(1, len(self.__matrix_save) + 1):
                 if i in range(min(self.buffer_range.get()), max(self.buffer_range.get()) + 1):
-                    self.matrix.buffer(i).data.x.set(self.__matrix_save[i-1]['x'])
-                    self.matrix.buffer(i).data.xe.set(self.__matrix_save[i-1]['xe'])
-                    self.matrix.buffer(i).data.y.set(self.__matrix_save[i-1]['y'])
-                    self.matrix.buffer(i).data.ye.set(self.__matrix_save[i-1]['ye'])
-                    self.matrix.buffer(i).data.z.set(self.__matrix_save[i-1]['z'])
-                    self.matrix.buffer(i).data.ze.set(self.__matrix_save[i-1]['ze'])
+                    self.matrix.buffer(i).data.x.set(self.__matrix_save[i - 1]['x'])
+                    self.matrix.buffer(i).data.xe.set(self.__matrix_save[i - 1]['xe'])
+                    self.matrix.buffer(i).data.y.set(self.__matrix_save[i - 1]['y'])
+                    self.matrix.buffer(i).data.ye.set(self.__matrix_save[i - 1]['ye'])
+                    self.matrix.buffer(i).data.z.set(self.__matrix_save[i - 1]['z'])
+                    self.matrix.buffer(i).data.ze.set(self.__matrix_save[i - 1]['ze'])
             self.is_active = False
             self.__matrix_save = None
 
         @staticmethod
         def apply_to_buffer(buffer_object, plot_limits):
-            new_buffer = buffer_object # removed copy.deepcopy
+            new_buffer = buffer_object  # removed copy.deepcopy
             x = new_buffer.data.x.get()
             xe = new_buffer.data.xe.get()
             y = new_buffer.data.y.get()
@@ -221,9 +221,12 @@ class Data(object):
             x_range = plot_limits.x_range.get()
             y_range = plot_limits.y_range.get()
             z_range = plot_limits.z_range.get()
-            idx_out = [i for i, j in enumerate(x) if not min(x_range)-1 <= i <= max(x_range)-1] if len(x_range) > 0 else [] + \
-                [i for i, j in enumerate(y) if not min(y_range)-1 <= j <= max(y_range)-1] if len(y_range) > 0 else [] + \
-                [i for i, j in enumerate(z) if not min(z_range)-1 <= j <= max(z_range)-1] if len(z_range) > 0 else []
+            idx_out = [i for i, j in enumerate(x) if not min(x_range) - 1 <= i <= max(x_range) - 1] if len(
+                x_range) > 0 else [] + \
+                                  [i for i, j in enumerate(y) if not min(y_range) - 1 <= j <= max(y_range) - 1] if len(
+                y_range) > 0 else [] + \
+                                  [i for i, j in enumerate(z) if not min(z_range) - 1 <= j <= max(z_range) - 1] if len(
+                z_range) > 0 else []
 
             if len(idx_out) == 0:
                 return buffer_object
@@ -268,12 +271,12 @@ class Data(object):
         class _BufferRange(_base_range):
             def __init__(self):
                 super(Data._PlotLimits._BufferRange, self).__init__()
-                #self.__base = tuple([int(x) for x in self.__base].sort()[:2]) if len(self.__base) >= 2 else None
+                # self.__base = tuple([int(x) for x in self.__base].sort()[:2]) if len(self.__base) >= 2 else None
 
         class _XYZRange(_base_range):
             def __init__(self):
                 super(Data._PlotLimits._XYZRange, self).__init__()
-                #self.__base = tuple([float(x) for x in self.__base].sort()[:2]) if len(self.__base) >= 2 else None
+                # self.__base = tuple([float(x) for x in self.__base].sort()[:2]) if len(self.__base) >= 2 else None
 
 
 class Directories(object):
@@ -338,14 +341,14 @@ class Buffer(object):
 
         class _base_weight(object):
             def __init__(self):
-                self.__weight = -1
+                self.__weight = 2
 
             def get(self) -> int:
                 return self.__weight
 
             def set(self, user_input: int):
                 self.__weight = user_input
-            
+
         class _base_array(object):
             def __init__(self):
                 self.__base = np.array([])
@@ -451,13 +454,14 @@ class Buffer(object):
 
         class _base_color(object):
             def __init__(self):
-                self.__color_val = '#000000' # black
+                self.__color_val = '#000000'  # black
 
             def set(self, color):
                 self.__color_val = color
 
             def get(self):
-                if len(str(self.__color_val)) > 0 and str(self.__color_val)[0] == '(' and str(self.__color_val)[-1] == ')':
+                if len(str(self.__color_val)) > 0 and str(self.__color_val)[0] == '(' and str(self.__color_val)[
+                    -1] == ')':
                     return tuple(self.__color_val)
                 return self.__color_val
 
@@ -519,7 +523,7 @@ class Buffer(object):
             def length(self) -> int:
                 return len(self.__base)
 
-            def indcies_of_value(self, value: str) -> list :
+            def indcies_of_value(self, value: str) -> list:
                 return [i for i, entry in enumerate(self.__base) if entry.strip().lower() == value.strip().lower()]
 
             def value_at_index(self, index: int) -> str:
@@ -540,14 +544,14 @@ class Buffer(object):
             self.fit_failed_reason = self._base_str()
 
         class _base_str(object):
-                def __init__(self):
-                    self.__str_val = ''
+            def __init__(self):
+                self.__str_val = ''
 
-                def set(self, value: str):
-                    self.__str_val = str(value)
+            def set(self, value: str):
+                self.__str_val = str(value)
 
-                def get(self) -> str:
-                    return self.__str_val
+            def get(self) -> str:
+                return self.__str_val
 
         class _base_list(object):
             def __init__(self):
@@ -629,7 +633,7 @@ class Buffer(object):
 
             class _base_color(object):
                 def __init__(self):
-                    self.__color_val = '#FF0000' # red
+                    self.__color_val = '#FF0000'  # red
 
                 def set(self, color):
                     self.__color_val = color
@@ -653,7 +657,7 @@ class Buffer(object):
                         point_type = f'${point_type.split("(")[-1][:-1]}$'
                         is_valid = True
                     else:
-                        for k,v in self.__valid_types.items():
+                        for k, v in self.__valid_types.items():
                             if point_type == k or point_type == v:
                                 point_type = v
                                 is_valid = True
@@ -666,39 +670,39 @@ class Buffer(object):
                 @staticmethod
                 def return_valid_types():
                     valid_types = {'point': '.',
-                                    'pixel': ',',
-                                    'circle': 'o',
-                                    'triangle_down': 'v',
-                                    'triangle_up': '^',
-                                    'triangle_left': '<',
-                                    'triangle_right': '>',
-                                    'tri_down': '1',
-                                    'tri_up': '2',
-                                    'tri_left': '3',
-                                    'tri_right': '4',
-                                    'octagon': '8',
-                                    'square': 's',
-                                    'pentagon': 'p',
-                                    'plus (filled)': 'P',
-                                    'star': '*',
-                                    'hexagon1': 'h',
-                                    'hexagon2': 'H',
-                                    'plus': '+',
-                                    'x': 'x',
-                                    'x (filled)': 'X',
-                                    'diamond': 'D',
-                                    'thin_diamond': 'd',
-                                    'vline': '|',
-                                    'hline': '_',
-                                    'tickleft': 0,
-                                    'tickright': 1,
-                                    'tickup': 2,
-                                    'tickdown': 3,
-                                    'caretleft': 4,
-                                    'caretright': 5,
-                                    'caretup': 6,
-                                    'caretdown': 7,
-                                    'string ex: @': 'string(@)'}
+                                   'pixel': ',',
+                                   'circle': 'o',
+                                   'triangle_down': 'v',
+                                   'triangle_up': '^',
+                                   'triangle_left': '<',
+                                   'triangle_right': '>',
+                                   'tri_down': '1',
+                                   'tri_up': '2',
+                                   'tri_left': '3',
+                                   'tri_right': '4',
+                                   'octagon': '8',
+                                   'square': 's',
+                                   'pentagon': 'p',
+                                   'plus (filled)': 'P',
+                                   'star': '*',
+                                   'hexagon1': 'h',
+                                   'hexagon2': 'H',
+                                   'plus': '+',
+                                   'x': 'x',
+                                   'x (filled)': 'X',
+                                   'diamond': 'D',
+                                   'thin_diamond': 'd',
+                                   'vline': '|',
+                                   'hline': '_',
+                                   'tickleft': 0,
+                                   'tickright': 1,
+                                   'tickup': 2,
+                                   'tickdown': 3,
+                                   'caretleft': 4,
+                                   'caretright': 5,
+                                   'caretup': 6,
+                                   'caretdown': 7,
+                                   'string ex: @': 'string(@)'}
                     return valid_types
 
         class __Axis(object):
@@ -712,7 +716,7 @@ class Buffer(object):
                     self.title = self.__base_title()
                     self.axis_scale = self.__base_scale()
                     self.range = self.__base_range()
-                    self.lines = self.__base_nparray()
+                    self.lines = self.__base_lines()
                     self.peaks = self.__base_nparray()
                     self.peak_bounds = self.__base_list()
                     self.integrals = self.__base_list()
@@ -774,6 +778,88 @@ class Buffer(object):
                     def hide(self, yes=True) -> bool:
                         self.is_visible = False if yes is True else True
                         return self.is_visible
+
+                class __base_lines(object):
+                    def __init__(self):
+                        self.__base_array = np.array([])
+                        self.is_visible = self.show()
+                        self.color = self._base_color()
+                        self.weight = self._base_weight()
+                        self.outline = self._outline()
+                        self.line_style = self._line_style()
+
+                    def append(self, constant):
+                        if not is_iterable(constant):
+                            constant = [float(constant)]
+                        self.__base_array = np.append(self.__base_array, constant, axis=0)
+
+                    def get(self) -> np.array:
+                        return self.__base_array
+
+                    def set(self, value_list: list):
+                        if type(value_list) is str:
+                            lines = ast.literal_eval(value_list)
+                        if type(value_list) in [int, float]:
+                            lines = [value_list]
+                        if is_iterable(value_list):
+                            self.__base_array = np.array(value_list)
+                        else:
+                            raise ValueError(f"Invalid parameter type: {type(value_list)}; Expecting List type!")
+
+                    def show(self, yes=True) -> bool:
+                        self.is_visible = yes
+                        return self.is_visible
+
+                    def hide(self, yes=True) -> bool:
+                        self.is_visible = False if yes is True else True
+                        return self.is_visible
+
+                    class _outline(object):
+                        def __init__(self):
+                            self.is_visible = True
+
+                        def hide(self):
+                            self.is_visible = False
+
+                        def show(self):
+                            self.is_visible = True
+
+                    class _base_weight(object):
+                        def __init__(self):
+                            self.__weight = 2
+
+                        def get(self) -> int:
+                            return self.__weight
+
+                        def set(self, user_input: int):
+                            self.__weight = user_input
+
+                    class _line_style(object):
+                        def __init__(self):
+                            self.__style = '--'
+                            self.__valid_types = ['-', '--', '-.', ':', 'None']
+
+                        def get(self) -> int:
+                            return self.__style
+
+                        def set(self, user_input: int):
+                            if user_input in self.__valid_types:
+                                self.__style = user_input
+                            else:
+                                print(f'No change to x-line or y-line line style. Valid types: {self.__valid_types}')
+
+                    class _base_color(object):
+                        def __init__(self):
+                            self.__color_val = '#808080'  # gray
+
+                        def set(self, color):
+                            self.__color_val = color
+
+                        def get(self):
+                            if len(str(self.__color_val)) > 0 and str(self.__color_val)[0] == '(' and \
+                                    str(self.__color_val)[-1] == ')':
+                                return tuple(self.__color_val)
+                            return self.__color_val
 
                 class __base_list(object):
                     def __init__(self):

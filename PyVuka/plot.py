@@ -243,8 +243,16 @@ class plotter(object):
         y_title_show = buffer.plot.axis.y.label.is_visible
         z_title_show = buffer.plot.axis.z.label.is_visible
         show_x_lines = buffer.plot.axis.x.lines.is_visible
+        x_line_color = buffer.plot.axis.x.lines.color.get()
+        x_line_weight = buffer.plot.axis.x.lines.weight.get()
+        x_line_is_outlined = buffer.plot.axis.x.lines.outline.is_visible
+        x_line_style = buffer.plot.axis.x.lines.line_style.get()
         x_lines = buffer.plot.axis.x.lines.get()
         show_y_lines = buffer.plot.axis.y.lines.is_visible
+        y_line_color = buffer.plot.axis.y.lines.color.get()
+        y_line_weight = buffer.plot.axis.y.lines.weight.get()
+        y_line_is_outlined = buffer.plot.axis.y.lines.outline.is_visible
+        y_line_style = buffer.plot.axis.y.lines.line_style.get()
         y_lines = buffer.plot.axis.y.lines.get()
         show_peaks = buffer.plot.axis.y.peaks.is_visible
         peak_indicies = buffer.plot.axis.y.peaks.get()
@@ -371,12 +379,26 @@ class plotter(object):
         #___________________________________#
         if show_x_lines and len(x_lines) >= 1:
             for line in x_lines:
-                self.__scatter_ax.axvline(x=line, linestyle='--', color='#808080', linewidth=data_weight, zorder=2,
-                           path_effects=[pe.Stroke(linewidth=data_weight * 2, foreground='#000000'), pe.Normal()])
+                if x_line_is_outlined:
+                    self.__scatter_ax.axvline(x=line, linestyle=x_line_style, color=x_line_color,
+                                              linewidth=x_line_weight, zorder=2,
+                                              path_effects=[
+                                                  pe.Stroke(linewidth=x_line_weight * 2, foreground='#000000'),
+                                                  pe.Normal()])
+                else:
+                    self.__scatter_ax.axvline(x=line, linestyle=x_line_style, color=x_line_color,
+                                              linewidth=x_line_weight, zorder=2)
         if show_y_lines and len(y_lines) >= 1:
             for line in y_lines:
-                self.__scatter_ax.axhline(y=line, linestyle='--', color='#808080', linewidth=data_weight, zorder=2,
-                           path_effects=[pe.Stroke(linewidth=data_weight * 2, foreground='#000000'), pe.Normal()])
+                if y_line_is_outlined:
+                    self.__scatter_ax.axhline(y=line, linestyle=y_line_style, color=y_line_color,
+                                              linewidth=y_line_weight, zorder=2,
+                                              path_effects=[
+                                                  pe.Stroke(linewidth=y_line_weight * 2, foreground='#000000'),
+                                                  pe.Normal()])
+                else:
+                    self.__scatter_ax.axhline(y=line, linestyle=y_line_style, color=y_line_color,
+                                              linewidth=y_line_weight, zorder=2)
         # ___________________________________#
         #  END X-line and Y-line Plotting   #
         #####################################
