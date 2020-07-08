@@ -368,7 +368,9 @@ class plotter(object):
                 self.__resid_ax.axhline(y=0, linestyle='-', color='#000000', linewidth=2, zorder=0)
                 self.__resid_ax.grid()
                 pl.ylabel('Residuals')
-            self.__resid_ax.set_ylim(min(y_resid_axis_range), max(y_resid_axis_range))
+            centered_range = (-1*max(abs(y_resid_axis_range[0]), abs(y_resid_axis_range[1])),
+                                max(abs(y_resid_axis_range[0]), abs(y_resid_axis_range[1])))
+            self.__resid_ax.set_ylim(min(centered_range), max(centered_range))
             self.__resid_ax.plot(X_resid, Y_resid, linestyle='-', color=series_color, linewidth=model_weight)
         #___________________________________#
         #        END Residual Plot          #

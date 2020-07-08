@@ -463,12 +463,38 @@ class IO(object):
                     newbuffer.data.x.append(segment)
                     newbuffer.plot.axis.x.lines.append(segment[0])
 
-                for j, segment in enumerate(Ydata):
-                    signal_shift = 0.0
-                    if j > 0:
-                        signal_shift = segment[0]-Ydata[j-1][-1]
-                    newbuffer.data.y.append(segment - signal_shift)
+                # y_segments = [] # used to save corrected y_data in meta_dict
+                # for j, segment in enumerate(Ydata):
+                #     signal_shift = 0.0
+                #     if j > 0:
+                #         signal_shift = segment[1] - Ydata[j-1][-1]
+                #     cor_y = segment - signal_shift
+                #     newbuffer.data.y.append(cor_y)
+                #     y_segments.append(cor_y)
 
+                # copy and paste of 'interstepcorrection' method from historical fortebiopkg. edited to suit
+                for j in range(0, len(Ydata) - 1):
+                    if Ydata[j][-1] > Ydata[j + 1][0]:
+                        ydif = Ydata[j][-1] - Ydata[j + 1][0]
+                        for k in range(0, len(Ydata[j + 1])):
+                            Ydata[j + 1][k] += ydif
+                    else:
+                        ydif = Ydata[j + 1][0] - Ydata[j][-1]
+                        for k in range(0, len(Ydata[j + 1])):
+                            Ydata[j + 1][k] -= ydif
+                for j in range(0, len(Xdata) - 1):
+                    if Xdata[j][-1] < Xdata[j + 1][0]:
+                        xdif = Xdata[j + 1][0] - Xdata[j][-1]
+                        for k in range(0, len(Xdata[j + 1])):
+                            Xdata[j + 1][k] -= xdif
+                    else:
+                        xdif = Xdata[j][-1] - Xdata[j + 1][0]
+                        for k in range(0, len(Xdata[j + 1])):
+                            Xdata[j + 1][k] -= xdif
+
+                newbuffer.data.x.set(np.concatenate(xdata, axis=None))
+                newbuffer.data.y.set(np.concatenate(ydata, axis=None))
+                ###
                 newbuffer.data.z.set([float(MolarConcentration[-2])] * newbuffer.data.y.length())
 
                 newbuffer.comments.set([str(SensorInfo) + " on " + str(SensorType) + " vs " +

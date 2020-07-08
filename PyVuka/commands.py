@@ -1249,13 +1249,7 @@ class Command(object):
             self("unl -all")
         ### If data is not linked or override to independent fitting and restore link and plot limit states###
         if not linked:
-            for i in range(firstbuffer, lastbuffer + 1):
-                com_list = [i, i, firstpoint, lastpoint]
-                command = "pl {} {} {} {}".format(*com_list)
-                self("pl off")
-                self(command)
-                self("pl on")
-                print(fitfxns.datafit(self.inst).dofit(*args))
+            print(fitfxns.datafit(self.inst).dofit(*args))
             self("pl off")
             if plon:
                 com_list = [firstbuffer, lastbuffer, firstpoint, lastpoint]
@@ -1443,15 +1437,19 @@ class Command(object):
             if not inparse.getparams():
                 return"\nNo Buffers Were Linked!"
             fitparams.update(self.inst.data.matrix.buffer(int(inparse.userinput[0])).fit.function_index.get())
+            input_buffers = [int(inparse.userinput[0]), int(inparse.userinput[2])]
+            input_params = [int(inparse.userinput[1]), int(inparse.userinput[3])]
+            buffer_to_link = max(input_buffers)
+            floating_buffer = min(input_buffers)
+            floating_parameter = input_params[input_buffers.index(floating_buffer)]
+            linked_parameter = input_params[input_buffers.index(buffer_to_link)]
             try:
-                links = self.inst.data.matrix.buffer(int(inparse.userinput[0])).fit.link.get()
-                links[int(inparse.userinput[1]) - 1] = fitparams.paramid[int(inparse.userinput[1])-1] + "_{}_{}".format(int(inparse.userinput[3]), int(inparse.userinput[2]))
-                self.inst.data.matrix.buffer(int(inparse.userinput[0])).fit.link.set(links)
-                return "\nParameter " + str(inparse.userinput[1]) + " of Buffer " + str(inparse.userinput[0]) + \
-                       " Linked to Parameter " + str(inparse.userinput[3]) + " of Buffer " + str(inparse.userinput[2])
+                links = self.inst.data.matrix.buffer(buffer_to_link).fit.link.get()
+                links[linked_parameter - 1] = fitparams.paramid[floating_parameter - 1] + "_{}_{}".format(floating_parameter, floating_buffer)
+                self.inst.data.matrix.buffer(inparse.userinput[0]).fit.link.set(links)
+                return f"\nParameter {linked_parameter} of Buffer {buffer_to_link} Linked to Parameter {floating_parameter} of Buffer {floating_buffer}"
             except:
                 return "\nInvalid Parameter Specified!"
-
         return "\nInvalid Command!"
 
     def do_unl(self, *args):
@@ -1604,7 +1602,7 @@ class Command(object):
         inparse(args)
         applyall = False
         if self.inst.data.plot_limits.is_active:
-            firstbuffer, lastbuffer = self.inst.data.plot_limits.buffer_range
+            firstbuffer, lastbuffer = self.inst.data.plot_limits.buffer_range.get()
         else:
             lastbuffer = self.inst.data.matrix.length()
             firstbuffer = 1

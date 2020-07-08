@@ -221,12 +221,9 @@ class Data(object):
             x_range = plot_limits.x_range.get()
             y_range = plot_limits.y_range.get()
             z_range = plot_limits.z_range.get()
-            idx_out = [i for i, j in enumerate(x) if not min(x_range) - 1 <= i <= max(x_range) - 1] if len(
-                x_range) > 0 else [] + \
-                                  [i for i, j in enumerate(y) if not min(y_range) - 1 <= j <= max(y_range) - 1] if len(
-                y_range) > 0 else [] + \
-                                  [i for i, j in enumerate(z) if not min(z_range) - 1 <= j <= max(z_range) - 1] if len(
-                z_range) > 0 else []
+            idx_out = [i for i, j in enumerate(x) if not min(x_range) - 1 <= i <= max(x_range) - 1] if len(x_range) > 0 else [] + \
+                [i for i, j in enumerate(y) if not min(y_range) - 1 <= j <= max(y_range) - 1] if len(y_range) > 0 else [] + \
+                [i for i, j in enumerate(z) if not min(z_range) - 1 <= j <= max(z_range) - 1] if len(z_range) > 0 else []
 
             if len(idx_out) == 0:
                 return buffer_object

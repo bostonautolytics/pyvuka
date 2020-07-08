@@ -1,5 +1,8 @@
 import numpy as np
 from lmfit import minimize, Parameters, report_fit
+from functools import partial
+import multiprocessing as mp
+import copy
 
 #constants
 gas_const_kcal = .0019872036
@@ -379,152 +382,151 @@ for j in range(len(X)):
             return False
         return True
 
-
     def dofit(self, *args):
-        ymatrix = []
-        parameters = Parameters()
         fitparams = datafit(self.inst)
-        bmax = 1
-        bmin = 1
-        p_best = []
-        longest = 0
-        debug = True
-        method = "Leastsq"
         args = [int(val) if val.isdigit() else val.lower() for val in args]
+        method = "Leastsq"
+        debug = True if "-debug" in args else False
+        group = abs(args[args.index('-group') + 1]) if '-group' in args and args.index('-group') < len(args) and is_integer(args[args.index('-group') + 1]) else 1 if '-ind' in args else self.inst.data.matrix.length()
+        cpu = abs(args[args.index('-cpu') + 1]) if '-cpu' in args and args.index('-cpu') < len(args) and is_integer(args[args.index('-cpu') + 1]) else 1
+        ind_fit = True if '-ind' in args else False
+        group = 1 if ind_fit else group
+        silent = True if "-silent" in args else False
+        iter_cb = debug_fitting if debug else None
+        max_iter = int(args[0]) if isinstance(args[0], int) else 2000
+        bmax = self.inst.data.matrix.length() #if not self.inst.data.plot_limits.is_active else max(self.inst.data.plot_limits.buffer_range.get())
+        bmin = 1 if not self.inst.data.plot_limits.is_active else min(self.inst.data.plot_limits.buffer_range.get())
 
-        if "-debug" in args:
-            iter_cb = self.debug_fitting
-        else:
-            iter_cb = None
-        if not self.inst.data.plot_limits.is_active:
-            bmax = self.inst.data.matrix.length()
-        else:
-            bmin = min(self.inst.data.plot_limits.buffer_range.get())
-            bmax = max(self.inst.data.plot_limits.buffer_range.get())
-        for i in range(bmin, bmax+1):
-            fitparams.update(self.inst.data.matrix.buffer(i).fit.function_index.get())
-            p_init = self.inst.data.matrix.buffer(i).fit.parameter.get()
+        #construct list of lists for X, Y, Params
+        X_vec = []
+        Y_vec = []
+        Z_vec = []
+        P_vec = []
+        IR_X_vec = []
+        IR_Y_vec = []
+        IR_Z_vec = []
+        FXN_vec = []
+        WEIGHTS_vec = []
+        FXN_NUM_vec = []
+        PARAM_ID_vec = []
+        Y_matrix = []
+        for i in range(bmin, bmax+1, group):
+            parameters = Parameters()
+            x_group = []
+            y_group = []
+            z_group = []
+            ir_x_group = []
+            ir_y_group = []
+            ir_z_group = []
+            fxn_group = []
+            weights_group = []
+            fxn_num_group = []
+            for j in range(group):
+                k=i+j
+                fitparams.clear()
+                fitparams.update(self.inst.data.matrix.buffer(k).fit.function_index.get())
+                p_init= self.inst.data.matrix.buffer(k).fit.parameter.get()
+                if len(p_init) == 0:
+                    return "Invalid Parameters!  Try Function: ap ."
 
-            max_iter = 2000 * (len(p_init) + 1)
-            # if int passed as arg, use as maximum iteration number, else default to lib default
-            new_max = [val for val in args if isinstance(val, int)]
-            if new_max:
-                max_iter = new_max[0]
+                for m in range(len(p_init)):
+                    try:
+                        parameters.add(name=fitparams.paramid[m] + "_{}_{}".format(m+1, k),
+                                       value=float(self.inst.data.matrix.buffer(k).fit.parameter.get()[m]),
+                                       min=float(min(fitparams.parambounds[m])), max=float(max(fitparams.parambounds[m])),
+                                       expr=self.inst.data.matrix.buffer(k).fit.link.get()[m],
+                                       vary=self.inst.data.matrix.buffer(k).fit.free.get()[m])
+                    except (NameError, ValueError) as e:
+                        if isinstance(e, NameError):
+                            return "Parameter Linking Scheme is Invalid!"
+                        elif isinstance(e, ValueError):
+                            return "Parameters Return Invalid Results!!"
 
-            if len(p_init) == 0:
-                return "Invalid Parameters!  Try Function: ap ."
-            ymatrix.append(self.inst.data.matrix.buffer(i).data.y.get())
-            for j in range(len(self.inst.data.matrix.buffer(i).fit.parameter.get())):
-                try:
-                    parameters.add(name=fitparams.paramid[j] + "_{}_{}".format(j+1, i),
-                                   value=float(self.inst.data.matrix.buffer(i).fit.parameter.get()[j]),
-                                   min=float(min(fitparams.parambounds[j])), max=float(max(fitparams.parambounds[j])),
-                                   expr=self.inst.data.matrix.buffer(i).fit.link.get()[j],
-                                   vary=self.inst.data.matrix.buffer(i).fit.free.get()[j])
-                except (NameError, ValueError) as e:
-                    if isinstance(e, NameError):
-                        return "Parameter Linking Scheme is Invalid!"
-                    elif isinstance(e, ValueError):
-                        return "Parameters Return Invalid Results!!"
-        ymatrix = np.array(ymatrix)
-        longest = max([len(y) for y in ymatrix])
+                x_group.append(self.inst.data.matrix.buffer(k).data.x.get())
+                y_group.append(self.inst.data.matrix.buffer(k).data.y.get())
+                z_group.append(self.inst.data.matrix.buffer(k).data.z.get())
+                ir_x_group.append(self.inst.data.matrix.buffer(k).instrument_response.x.get())
+                ir_y_group.append(self.inst.data.matrix.buffer(k).instrument_response.y.get())
+                ir_z_group.append(self.inst.data.matrix.buffer(k).instrument_response.z.get())
+                weights_group.append(np.reciprocal(self.inst.data.matrix.buffer(k).data.ye.get()))
+                fxn_group.append(self.inst.data.matrix.buffer(k).fit.function.get())
+                temp_df = datafit(self.inst)
+                temp_df.update(self.inst.data.matrix.buffer(k).fit.function_index.get())
+                fxn_num_group.append(self.inst.data.matrix.buffer(k).fit.function_index.get())
+            X_vec.append(x_group)
+            Y_vec.append(y_group)
+            Z_vec.append(z_group)
+            P_vec.append(parameters)
+            IR_X_vec.append(ir_x_group)
+            IR_Y_vec.append(ir_y_group)
+            IR_Z_vec.append(ir_z_group)
+            WEIGHTS_vec.append(weights_group)
+            FXN_vec.append(fxn_group)
+            FXN_NUM_vec.append(fxn_num_group)
+
         try:
-            assert ymatrix.shape == (bmax-bmin+1, longest)
+            for vec in Y_vec:
+                Y_matrix.append(np.array(vec))
+                assert Y_matrix[-1].shape == (len(Y_matrix[-1]), max([len(y) for y in vec]))
         except AssertionError:
             return "All Buffers Must Be the Same Number of Points!  Try Commands: pl or res or tri"
-        try:
-            result = minimize(self.objective, parameters, args=(ymatrix, bmin, bmax),
-                      iter_cb=iter_cb, method=method, maxfev=max_iter, nan_policy='omit')
-        except Exception as e:
-            for i in range(bmin, bmax + 1):
-                x = self.inst.data.matrix.buffer(i).data.x.get()
-                y = self.inst.data.matrix.buffer(i).data.y.get()
-                z = self.inst.data.matrix.buffer(i).data.z.get()
-                self.inst.data.matrix.buffer(i).fit.fit_failed = True
-                self.inst.data.matrix.buffer(i).fit.fit_failed_reason.set(str(e))
-                self.inst.data.matrix.buffer(i).fit.parameter.set([-1] * len(parameters))
-                self.inst.data.matrix.buffer(i).fit.parameter_error.set([-1] * len(parameters))
-                self.inst.data.matrix.buffer(i).model.x.set([x[0], x[-1]] if len(x) > 1 else [])
-                self.inst.data.matrix.buffer(i).model.y.set([y[0], y[-1]] if len(y) > 1 else [])
-                self.inst.data.matrix.buffer(i).model.z.set([z[0], z[-1]] if len(z) > 1 else [])
-            return f"\nFit Failed!\n\t{str(e)}"
 
-        self.saveparams(result)
-        report_fit(result.params)
+        param_dict = {'x_vec': X_vec, 'y_vec': Y_vec, 'z_vec': Z_vec, 'p_vec':P_vec, 'y_matrix': Y_matrix,
+                      'ir_x_vec': IR_X_vec, 'ir_y_vec': IR_Y_vec, 'ir_z_vec': IR_Z_vec, 'silent': silent,
+                      'weights_vec': WEIGHTS_vec, 'fxn_vec': FXN_vec, 'fxn_num_vec': FXN_NUM_vec,
+                      'param_id_vec': PARAM_ID_vec,'method': method, 'debug': debug, 'group': group, 'cpu': cpu,
+                      'ind_fit': ind_fit, 'iter_cb': iter_cb, 'max_iter': max_iter, 'index': i}
 
-        # calculate model
-        for i in range(bmin, bmax + 1):
-            self.generatemodel(i, numpts=300)
+        result = multi_fit(param_dict)
+        result = self.split_result_by_group(result, group)
 
-        # print number of function efvals
-        print('\n#Function efvals:\t', result.nfev)
-        #print number of data points
-        print('#Data pts:\t', result.ndata)
-        #print number of variables
-        print('#Variables:\t', result.nvarys)
-        # chi-sqr
-        print('\nResult Chi Sq:\t', result.chisqr)
-        # reduce chi-sqr
-        print('Result Reduced Chi Sq:\t', result.redchi)
-        # Akaike info crit
-        print('Result Akaike:\t', result.aic)
-        # Bayesian info crit
-        print('Result Bayesian:\t', result.bic)
+        print('Saving parameters to matrix...')
+        self.saveparams(result, group, silent)
+
+        print('Calculating fit stats and generating model traces...')
+        for i in range(bmin, bmax+1):
+            try:
+                self.calcfitstat(i)
+                self.generatemodel(i, numpts=300)
+            except Exception as e:
+                print(str(e))
+
+            if debug:
+                report_fit(result[i-bmin].params)
+
+            if not silent:
+                print(f'---Buffer {i} fit statistics---')
+                # print number of function efvals
+                print('\n#Function efvals:\t', result[i-bmin].nfev)
+                #print number of data points
+                print('#Data pts:\t', result[i-bmin].ndata)
+                #print number of variables
+                print('#Variables:\t', result[i-bmin].nvarys)
+                # chi-sqr
+                print('\nResult Chi Sq:\t', result[i-bmin].chisqr)
+                # reduce chi-sqr
+                print('Result Reduced Chi Sq:\t', result[i-bmin].redchi)
+                # Akaike info crit
+                print('Result Akaike:\t', result[i-bmin].aic)
+                # Bayesian info crit
+                print('Result Bayesian:\t', result[i-bmin].bic)
+                print('-----------------------------')
         return "\nData Fitting Complete!"
 
-
-    def debug_fitting(self, params, nfev, resid, *args, **kwargs):
-        """Function to be called after each iteration of the minimization method
-        used by lmfit. Should reveal information about how parameter values are
-        changing after every iteration in the fitting routine. See
-        lmfit.Minimizer.__residual for more information."""
-        print("Iteration {0}".format(nfev) + "\tRsq: " + str(np.sum(np.power(resid, 2))))
-
-
-    def objective(self, params, ymatrix, bmin, bmax):  # calculate residuals to determine if the parameters are improving the fit
-        resid = 0.0 * ymatrix[:]
-        for i in range(bmin, bmax + 1):
-            P = []
-            self.update(self.inst.data.matrix.buffer(i).fit.function_index.get())
-            X = self.inst.data.matrix.buffer(i).data.x.get()
-            Y = self.inst.data.matrix.buffer(i).data.y.get()
-            Z = self.inst.data.matrix.buffer(i).data.z.get()
-            IRX = self.inst.data.matrix.buffer(i).instrument_response.x.get()
-            IRY = self.inst.data.matrix.buffer(i).instrument_response.y.get()
-            IRZ = self.inst.data.matrix.buffer(i).instrument_response.z.get()
-            weights = np.reciprocal(self.inst.data.matrix.buffer(i).data.ye.get())
-
-            # Fit the data
-            fxn = self.inst.data.matrix.buffer(i).fit.function.get()
-            R = [0] * len(X)
-            for j in range(len(self.inst.data.matrix.buffer(i).fit.parameter.get())):
-                pname = self.paramid[j].replace('-', '') + "_{}_{}".format(j+1, i)
-                P.append(params[pname].value)
-            if fxn is not False and fxn[:2].upper() == "Y=":
-                fxn = fxn[2:]
-            # execute custom script
-            if self.pyscript:
-                exec(self.pyscript)
-            else:
-                R = eval(str(fxn))
-
-            self.inst.data.matrix.buffer(i).fit.parameter.set(P)
-            R = np.array(R)
-
-            self.inst.data.matrix.buffer(i).residuals.y.set(Y - R)
-            self.inst.data.matrix.buffer(i).residuals.x.set(X)
-            resid_line = self.inst.data.matrix.buffer(i).residuals.y.get()
-            if len(weights) > 1:
-                # apply weights
-                resid_line = (Y - R) * weights
-            resid[i - bmin, :] = np.power(resid_line, 2)
-            self.calcfitstat(i)
-        # now flatten this to a 1D array, as minimize() needs
-        return resid.flatten()
-
+    def split_result_by_group(self, result, group):
+        '''Make result vector equivilent size to buffer matrix by splitting results by group'''
+        if group == 1:
+            return result
+        result_to_return = []
+        for r in result:
+            for i in range(group):
+                if r == None:
+                    result_to_return.append(None)
+                    continue
+                result_to_return.append(copy.copy(r))
+        return result_to_return
 
     def generatemodel(self, i, numpts=300):
-        self.update(self.inst.data.matrix.buffer(i).fit.function_index.get())
         X = self.inst.data.matrix.buffer(i).data.x.get()
         Y = self.inst.data.matrix.buffer(i).data.y.get()
         Z = self.inst.data.matrix.buffer(i).data.z.get()
@@ -565,12 +567,12 @@ for j in range(len(X)):
         self.inst.data.matrix.buffer(i).model.y.set(R)
         return True
 
-
     def calcfitstat(self, i):
         rawy = self.inst.data.matrix.buffer(i).data.y.get()
         resid_y = self.inst.data.matrix.buffer(i).residuals.y.get()
         rsq = np.sum(np.power(resid_y, 2))
         avgerror = np.sum(np.power(rawy - np.average(rawy), 2))
+        avgerror = 1E-6 if avgerror == 0 else avgerror
         self.inst.data.matrix.buffer(i).fit.rsq.set(1 - (rsq / avgerror))
         SD = np.average(np.abs(resid_y))
         if SD == 0:
@@ -579,32 +581,172 @@ for j in range(len(X)):
         return
 
 
-    def saveparams(self, result):
-        parameters = Parameters()
+    def saveparams(self, result, group, silent):
         bmin = 1
         if not self.inst.data.plot_limits.is_active:
             bmax = self.inst.data.matrix.length()
         else:
             bmin = self.inst.data.plot_limits.buffer_range.min()
             bmax = self.inst.data.plot_limits.buffer_range.max()
-        for i in range(bmin, bmax+1):
+
+        if not silent:
+            print('--------Fit Parameters---------')
+
+        grp_cnt = -1
+        for i in range(bmin, bmax+1, 1):
+            grp_cnt = grp_cnt + 1 if grp_cnt < group-1 else 0
+            i_idx = i-bmin
             self.clear()
             self.update(self.inst.data.matrix.buffer(i).fit.function_index.get())
             self.inst.data.matrix.buffer(i).fit.parameter_error.set([0] * len(self.inst.data.matrix.buffer(i).fit.parameter.get()))
+            parameters = self.inst.data.matrix.buffer(i).fit.parameter.get()
 
-            for j in range(len(self.paramid)):
-                param = result.params[self.paramid[j] + f"_{j+1}_{i}"].value
-                error = result.params[self.paramid[j] + f"_{j+1}_{i}"].stderr
-                temp = self.inst.data.matrix.buffer(i).fit.parameter.get()
-                temp[j] = param
-                self.inst.data.matrix.buffer(i).fit.parameter.set(temp)
-                temp = self.inst.data.matrix.buffer(i).fit.parameter_error.get()
-                temp[j] = error
-                self.inst.data.matrix.buffer(i).fit.parameter_error.set(temp)
-                print("Buffer " + str(i) + " Parameter " + str(j+1) + " = " + str(param) + " +/- " + str(error))
+            # if fit failed fill in data
+            if result[i_idx].aborted:
+                x = self.inst.data.matrix.buffer(i).data.x.get()
+                y = self.inst.data.matrix.buffer(i).data.y.get()
+                z = self.inst.data.matrix.buffer(i).data.z.get()
+                self.inst.data.matrix.buffer(i).fit.fit_failed = True
+                self.inst.data.matrix.buffer(i).fit.fit_failed_reason.set(str(e))
+                self.inst.data.matrix.buffer(i).fit.parameter.set([-1] * len(parameters))
+                self.inst.data.matrix.buffer(i).fit.parameter_error.set([-1] * len(parameters))
+                self.inst.data.matrix.buffer(i).model.x.set([x[0], x[-1]] if len(x) > 1 else [])
+                self.inst.data.matrix.buffer(i).model.y.set([y[0], y[-1]] if len(y) > 1 else [])
+                self.inst.data.matrix.buffer(i).model.z.set([z[0], z[-1]] if len(z) > 1 else [])
+                self.inst.data.matrix.buffer(i).residuals.y.set([y[0], y[-1]] if len(y) > 1 else [])
+                self.inst.data.matrix.buffer(i).residuals.x.set(x)
+                if not silent:
+                    print(f'Buffer {i}: Fit Failed!\n-----------------------------')
+                continue
 
-        for i in range(bmin, bmax+1):
-            for j in range(len(self.inst.data.matrix.buffer(i).fit.parameter.get())):
-                print(f"Buffer {i} Parameter {j+1} = {str(self.inst.data.matrix.buffer(i).fit.parameter.get()[j])}" +
-                      f" +/- {str(self.inst.data.matrix.buffer(i).fit.parameter_error.get()[j])}")
+            # Else, add fit  values to matrix
+            resid= np.array_split(result[i_idx].residual, group)
+            self.inst.data.matrix.buffer(i).residuals.y.set(resid[grp_cnt])
+            self.inst.data.matrix.buffer(i).residuals.x.set(self.inst.data.matrix.buffer(i).data.x.get())
+            for j_idx in range(len(self.paramid)):
+                j = j_idx+1
+                param = result[i_idx].params[self.paramid[j_idx] + f"_{j}_{i}"].value
+                error = result[i_idx].params[self.paramid[j_idx] + f"_{j}_{i}"].stderr
+                param_list = self.inst.data.matrix.buffer(i).fit.parameter.get()
+                param_list[j_idx] = param
+                self.inst.data.matrix.buffer(i).fit.parameter.set(param_list)
+                error_list = self.inst.data.matrix.buffer(i).fit.parameter_error.get()
+                error_list[j_idx] = error
+                self.inst.data.matrix.buffer(i).fit.parameter_error.set(error_list)
+                if not silent:
+                    print(f'Buffer {i}: Parameter: {self.paramid[j_idx]} = {param} +/- {error}')
+
+            if not silent:
+                print('-----------------------------')
         return True
+
+
+def debug_fitting(self, params, nfev, resid, *args, **kwargs):
+    """Function to be called after each iteration of the minimization method
+    used by lmfit. Should reveal information about how parameter values are
+    changing after every iteration in the fitting routine. See
+    lmfit.Minimizer.__residual for more information."""
+    print("Iteration {0}".format(nfev) + "\tRsq: " + str(np.sum(np.power(resid, 2))))
+
+
+def is_integer(input):
+    try:
+        num = int(input)
+    except ValueError:
+        return False
+    return True
+
+
+def eval_objective(params, y_matrix, idx, param_dict):  # calculate residuals to determine if the parameters are improving the fit
+    '''param_dict = param_dict = {'x_vec': X_vec, 'y_vec': Y_vec, 'z_vec': Z_vec, 'p_vec':P_vec, 'y_matrix': Y_matrix,
+                          'ir_x_vec': IR_X_vec, 'ir_y_vec': IR_Y_vec, 'ir_z_vec': IR_Z_vec,
+                          'weights_vec': WEIGHTS_vec, 'fxn_vec': FXN_vec, 'fxn_num_vec': FXN_NUM_vec,
+                          'param_id_vec': PARAM_ID_vec,'method': method, 'debug': debug, 'group': group, 'cpu': cpu,
+                          'ind_fit': ind_fit, 'iter_cb': iter_cb, 'max_iter': max_iter}'''
+    resid = 0.0 * y_matrix[:]
+    group = param_dict['group']
+    x_vec = param_dict['x_vec'][idx]
+    y_vec = param_dict['y_vec'][idx]
+    z_vec = param_dict['z_vec'][idx]
+    p_vec = param_dict['p_vec'][idx]
+    ir_x_vec = param_dict['ir_x_vec'][idx]
+    ir_y_vec = param_dict['ir_y_vec'][idx]
+    ir_z_vec = param_dict['ir_z_vec'][idx]
+    fxn_vec = param_dict['fxn_vec'][idx]
+    weights_vec = param_dict['weights_vec'][idx]
+    fxn_num_vec = param_dict['fxn_num_vec'][idx]
+    pyscript_vec = []
+    param_id_vec = []
+    for fxn_num in fxn_num_vec:
+        temp_df = datafit(fxn_num)
+        temp_df.update(fxn_num)
+        pyscript_vec.append(temp_df.pyscript)
+        param_id_vec.append(temp_df.paramid)
+    for i in range(len(x_vec)):
+        P = []
+        X = x_vec[i]
+        Y = y_vec[i]
+        Z = z_vec[i]
+        IRX = ir_x_vec[i]
+        IRY = ir_y_vec[i]
+        IRZ = ir_z_vec[i]
+        weights = np.reciprocal(weights_vec[i])
+
+        # Fit the data
+        fxn = fxn_vec[i]
+        R = [0] * len(X)
+        for j in range(len(param_id_vec[i])):
+            pname = param_id_vec[i][j].replace('-', '') + "_{}_{}".format(j + 1, i+(idx*group)+1)
+            P.append(params[pname].value)
+        if fxn is not False and fxn[:2].upper() == "Y=":
+            fxn = fxn[2:]
+        # execute custom script
+        if pyscript_vec[i]:
+            exec(pyscript_vec[i])
+        else:
+            R = eval(str(fxn))
+
+        p_vec = P
+        R = np.array(R)
+
+        resid_line = (Y - R) if len(weights) <= 1 else (Y - R) * weights
+        resid[i, :] = np.power(resid_line, 2)
+    # now flatten this to a 1D array, as minimize() needs
+    return resid.flatten()
+
+
+def optimizer(param_dict, idx):
+    print(f'Evaluating #{idx+1} from total pool of: {len(param_dict["y_vec"])}')
+    parameters = param_dict['p_vec'][idx]
+    iter_cb = param_dict['iter_cb']
+    max_iter = iter_cb = param_dict['max_iter']
+    method = iter_cb = param_dict['method']
+    argsx = (param_dict['y_matrix'][idx], idx, param_dict)
+    result = minimize(eval_objective, parameters, args=(param_dict['y_matrix'][idx], idx, param_dict),
+             iter_cb=iter_cb, method=method, maxfev=max_iter, nan_policy='omit')
+    return result
+
+
+def multi_fit(param_dict):
+    '''param_dict = {'x_vec': X_vec, 'y_vec': Y_vec, 'z_vec': Z_vec, 'p_vec':P_vec, 'y_matrix': Y_matrix,
+                          'ir_x_vec': IR_X_vec, 'ir_y_vec': IR_Y_vec, 'ir_z_vec': IR_Z_vec,
+                          'weights_vec': WEIGHTS_vec, 'fxn_vec': FXN_vec, 'fxn_num_vec': FXN_NUM_vec,
+                          'param_id_vec': PARAM_ID_vec,'method': method, 'debug': debug, 'group': group, 'cpu': cpu,
+                          'ind_fit': ind_fit, 'iter_cb': iter_cb, 'max_iter': max_iter}'''
+    idx_list = [*range(len(param_dict['x_vec']))]
+    func = partial(optimizer, param_dict)
+    cpu_num = min(mp.cpu_count()-1, param_dict['cpu'], len(idx_list))
+    results = []
+    if cpu_num > 1:
+        print(f'Generating Workers (cores:{cpu_num})...')
+        proc_pool = mp.Pool(cpu_num)
+        print('Fitting data in multiprocessing mode...')
+        results = proc_pool.map_async(func, idx_list)
+        proc_pool.close()
+        proc_pool.join()
+        results = results.get()
+    else: # Avoid multiprocessing overhead
+        print(f'Fitting data in single core mode...')
+        for idx in idx_list:
+            results.append(func(idx))
+    return results
