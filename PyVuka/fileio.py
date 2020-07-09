@@ -492,8 +492,8 @@ class IO(object):
                         for k in range(0, len(Xdata[j + 1])):
                             Xdata[j + 1][k] -= xdif
 
-                newbuffer.data.x.set(np.concatenate(xdata, axis=None))
-                newbuffer.data.y.set(np.concatenate(ydata, axis=None))
+                newbuffer.data.x.set(np.concatenate(Xdata, axis=None))
+                newbuffer.data.y.set(np.concatenate(Ydata, axis=None))
                 ###
                 newbuffer.data.z.set([float(MolarConcentration[-2])] * newbuffer.data.y.length())
 
