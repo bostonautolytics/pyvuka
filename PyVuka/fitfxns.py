@@ -3,6 +3,7 @@ from lmfit import minimize, Parameters, report_fit
 from functools import partial
 import multiprocessing as mp
 import copy
+import itertools
 
 #constants
 gas_const_kcal = .0019872036
@@ -648,14 +649,12 @@ def debug_fitting(self, params, nfev, resid, *args, **kwargs):
     lmfit.Minimizer.__residual for more information."""
     print("Iteration {0}".format(nfev) + "\tRsq: " + str(np.sum(np.power(resid, 2))))
 
-
 def is_integer(input):
     try:
         num = int(input)
     except ValueError:
         return False
     return True
-
 
 def eval_objective(params, y_matrix, idx, param_dict):  # calculate residuals to determine if the parameters are improving the fit
     '''param_dict = param_dict = {'x_vec': X_vec, 'y_vec': Y_vec, 'z_vec': Z_vec, 'p_vec':P_vec, 'y_matrix': Y_matrix,
@@ -714,18 +713,18 @@ def eval_objective(params, y_matrix, idx, param_dict):  # calculate residuals to
     # now flatten this to a 1D array, as minimize() needs
     return resid.flatten()
 
-
-def optimizer(param_dict, idx):
-    print(f'Evaluating #{idx+1} from total pool of: {len(param_dict["y_vec"])}')
-    parameters = param_dict['p_vec'][idx]
-    iter_cb = param_dict['iter_cb']
-    max_iter = iter_cb = param_dict['max_iter']
-    method = iter_cb = param_dict['method']
-    argsx = (param_dict['y_matrix'][idx], idx, param_dict)
-    result = minimize(eval_objective, parameters, args=(param_dict['y_matrix'][idx], idx, param_dict),
-             iter_cb=iter_cb, method=method, maxfev=max_iter, nan_policy='omit')
+def optimizer(param_dict, idx_list):
+    result = []
+    for idx in idx_list:
+        print(f'Evaluating #{idx+1} from total pool of: {len(param_dict["y_vec"])}')
+        parameters = param_dict['p_vec'][idx]
+        iter_cb = param_dict['iter_cb']
+        max_iter = iter_cb = param_dict['max_iter']
+        method = iter_cb = param_dict['method']
+        argsx = (param_dict['y_matrix'][idx], idx, param_dict)
+        result.append(minimize(eval_objective, parameters, args=(param_dict['y_matrix'][idx], idx, param_dict),
+                 iter_cb=iter_cb, method=method, maxfev=max_iter, nan_policy='omit'))
     return result
-
 
 def multi_fit(param_dict):
     '''param_dict = {'x_vec': X_vec, 'y_vec': Y_vec, 'z_vec': Z_vec, 'p_vec':P_vec, 'y_matrix': Y_matrix,
@@ -735,18 +734,20 @@ def multi_fit(param_dict):
                           'ind_fit': ind_fit, 'iter_cb': iter_cb, 'max_iter': max_iter}'''
     idx_list = [*range(len(param_dict['x_vec']))]
     func = partial(optimizer, param_dict)
-    cpu_num = min(mp.cpu_count()-1, param_dict['cpu'], len(idx_list))
+    cpu_num = int(min(mp.cpu_count()-1, param_dict['cpu'], len(idx_list)))
     results = []
     if cpu_num > 1:
+        group = param_dict['group']
+        seg_size = int(np.floor(np.floor(len(idx_list) / group) / cpu_num) * group)
+        seg_idx_list = [idx_list[i*seg_size:(i+1)*seg_size] if ((i+2)*seg_size) < len(idx_list) else idx_list[i*seg_size:] for i in range(cpu_num)]
         print(f'Generating Workers (cores:{cpu_num})...')
         proc_pool = mp.Pool(cpu_num)
         print('Fitting data in multiprocessing mode...')
-        results = proc_pool.map_async(func, idx_list)
+        results = proc_pool.map_async(func, seg_idx_list)
         proc_pool.close()
         proc_pool.join()
-        results = results.get()
+        results = list(itertools.chain.from_iterable(results.get()))
     else: # Avoid multiprocessing overhead
         print(f'Fitting data in single core mode...')
-        for idx in idx_list:
-            results.append(func(idx))
+        results = [func([idx])[0] for idx in idx_list]
     return results
