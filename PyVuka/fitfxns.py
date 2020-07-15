@@ -449,7 +449,7 @@ for j in range(len(X)):
                 ir_x_group.append(self.inst.data.matrix.buffer(k).instrument_response.x.get())
                 ir_y_group.append(self.inst.data.matrix.buffer(k).instrument_response.y.get())
                 ir_z_group.append(self.inst.data.matrix.buffer(k).instrument_response.z.get())
-                weights_group.append(np.reciprocal(self.inst.data.matrix.buffer(k).data.ye.get()))
+                weights_group.append(self.inst.data.matrix.buffer(k).data.ye.get())
                 fxn_group.append(self.inst.data.matrix.buffer(k).fit.function.get())
                 temp_df = datafit(self.inst)
                 temp_df.update(self.inst.data.matrix.buffer(k).fit.function_index.get())
@@ -511,6 +511,8 @@ for j in range(len(X)):
                 print('Result Akaike:\t', result[i-bmin].aic)
                 # Bayesian info crit
                 print('Result Bayesian:\t', result[i-bmin].bic)
+                # message
+                print('Fit Details:\t', result[i-bmin].message)
                 print('-----------------------------')
         return "\nData Fitting Complete!"
 
@@ -622,7 +624,11 @@ for j in range(len(X)):
 
             # Else, add fit  values to matrix
             resid= np.array_split(result[i_idx].residual, group)
-            self.inst.data.matrix.buffer(i).residuals.y.set(resid[grp_cnt])
+            # weights used are typically Y error vector
+            weights = self.inst.data.matrix.buffer(i).data.ye.get()
+            # Residuals are squared in fit minimization and multiplied by the weight vector.  Here we reverse those calculations
+            unweighted_resid = np.power(resid[grp_cnt], 0.5) if len(weights) <= 1 else np.power(resid[grp_cnt], 0.5) / weights
+            self.inst.data.matrix.buffer(i).residuals.y.set(unweighted_resid)
             self.inst.data.matrix.buffer(i).residuals.x.set(self.inst.data.matrix.buffer(i).data.x.get())
             for j_idx in range(len(self.paramid)):
                 j = j_idx+1
@@ -689,7 +695,7 @@ def eval_objective(params, y_matrix, idx, param_dict):  # calculate residuals to
         IRX = ir_x_vec[i]
         IRY = ir_y_vec[i]
         IRZ = ir_z_vec[i]
-        weights = np.reciprocal(weights_vec[i])
+        weights = weights_vec[i]
 
         # Fit the data
         fxn = fxn_vec[i]
