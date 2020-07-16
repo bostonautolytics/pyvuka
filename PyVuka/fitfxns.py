@@ -627,7 +627,11 @@ for j in range(len(X)):
             # weights used are typically Y error vector
             weights = self.inst.data.matrix.buffer(i).data.ye.get()
             # Residuals are squared in fit minimization and multiplied by the weight vector.  Here we reverse those calculations
-            unweighted_resid = np.power(resid[grp_cnt], 0.5) if len(weights) <= 1 else np.power(resid[grp_cnt], 0.5) / weights
+            try:
+                unweighted_resid = np.power(resid[grp_cnt], 0.5) if len(weights) <= 1 else np.power(resid[grp_cnt], 0.5) / weights
+            except:
+                weights = np.nan_to_num(weights, nan=1.0)
+                unweighted_resid = np.power(resid[grp_cnt], 0.5) if len(weights) <= 1 else np.power(resid[grp_cnt], 0.5) / weights
             self.inst.data.matrix.buffer(i).residuals.y.set(unweighted_resid)
             self.inst.data.matrix.buffer(i).residuals.x.set(self.inst.data.matrix.buffer(i).data.x.get())
             for j_idx in range(len(self.paramid)):

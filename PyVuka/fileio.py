@@ -401,7 +401,7 @@ class IO(object):
             return False
         experiment = []
         for files in os.listdir(experimentdirectory):
-            if files.endswith('.frd'):
+            if files.endswith('.frd') and not files.startswith('._'):
                 Xdata = []
                 Ydata = []
                 StepName = []
