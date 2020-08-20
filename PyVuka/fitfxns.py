@@ -583,7 +583,6 @@ for j in range(len(X)):
         self.inst.data.matrix.buffer(i).fit.chisq.set(np.sum(((resid_y) ** 2) / SD))
         return
 
-
     def saveparams(self, result, group, silent):
         bmin = 1
         if not self.inst.data.plot_limits.is_active:
@@ -658,6 +657,7 @@ def debug_fitting(self, params, nfev, resid, *args, **kwargs):
     changing after every iteration in the fitting routine. See
     lmfit.Minimizer.__residual for more information."""
     print("Iteration {0}".format(nfev) + "\tRsq: " + str(np.sum(np.power(resid, 2))))
+
 
 def is_integer(input):
     try:

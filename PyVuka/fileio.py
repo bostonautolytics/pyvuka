@@ -458,10 +458,6 @@ class IO(object):
 
                 newbuffer = self.data.new_buffer()
 
-                for segment in Xdata:
-                    newbuffer.data.x.append(segment)
-                    newbuffer.plot.axis.x.lines.append(segment[0])
-
                 ### copy and paste of 'interstepcorrection' method from historical fortebiopkg. edited to suit
                 for j in range(0, len(Ydata) - 1):
                     if Ydata[j][-1] > Ydata[j + 1][0]:
@@ -481,6 +477,10 @@ class IO(object):
                         xdif = Xdata[j][-1] - Xdata[j + 1][0]
                         for k in range(0, len(Xdata[j + 1])):
                             Xdata[j + 1][k] -= xdif
+
+                for segment in Xdata:
+                    newbuffer.data.x.append(segment)
+                    newbuffer.plot.axis.x.lines.append(segment[0])
 
                 newbuffer.data.x.set(np.concatenate(Xdata, axis=None))
                 newbuffer.data.y.set(np.concatenate(Ydata, axis=None))

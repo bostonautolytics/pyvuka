@@ -1021,7 +1021,7 @@ class Command(object):
                 const = buffer.data.x.value_at_index(point_index)
                 buffer.data.x.set(buffer.data.x.get() - const)
                 buffer.plot.axis.x.lines.set(buffer.plot.axis.x.lines.get() - const)
-        return '\nData Successfully Shifted!'
+        return '\nData Successfully Shifted to Origin!'
 
     def do_dr(self, *args):
         """\nCommand: DRaw\n
