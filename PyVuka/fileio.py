@@ -404,6 +404,7 @@ class IO(object):
             if files.endswith('.frd') and not files.startswith('._'):
                 Xdata = []
                 Ydata = []
+                z_value = 0
                 StepName = []
                 ActualTime = []
                 StepStatus = []
@@ -411,15 +412,16 @@ class IO(object):
                 Concentration = []
                 MolarConcentration = []
                 SampleID = []
+                SampleInfo = []
                 WellType = []
                 MW = []
-                Flags =[]
+                Flags = []
                 SampleGroup = []
                 StepLoc = []
                 loadingsample = ''
                 loadingstart = 0
                 loadingend = 0
-                loadingwell =''
+                loadingwell = ''
                 infile = xmlio.parse(os.path.join(experimentdirectory, files)).getroot()
                 for expinfo in infile.findall('ExperimentInfo'):
                     SensorName = expinfo.find('SensorName').text
@@ -438,6 +440,10 @@ class IO(object):
                                 SampleGroup.append(commondata.find('SampleGroup').text)
                             else:
                                 SampleGroup.append(None)
+                            if commondata.find('SampleInfo') is not None:
+                                SampleInfo.append(commondata.find('SampleInfo').text)
+                            else:
+                                SampleInfo.append(None)
                             MW.append(commondata.find('MolecularWeight').text)
                             Xdata.append(np.array(array.array('f', base64.b64decode(stepdata.find('AssayXData').text))))
                             Ydata.append(np.array(array.array('f', base64.b64decode(stepdata.find('AssayYData').text))))
@@ -485,10 +491,10 @@ class IO(object):
                 newbuffer.data.x.set(np.concatenate(Xdata, axis=None))
                 newbuffer.data.y.set(np.concatenate(Ydata, axis=None))
                 ###
-                newbuffer.data.z.set([float(MolarConcentration[-2])] * newbuffer.data.y.length())
+                newbuffer.data.z.set([z_value] * newbuffer.data.y.length())
 
                 newbuffer.comments.set([str(SensorInfo) + " on " + str(SensorType) + " vs " +
-                                           str(SampleID[-2]) + " @ " + str(MolarConcentration[-2]) + "nM"])
+                                        str(SampleID[-2]) + " @ " + str(MolarConcentration[-2]) + "nM"])
                 newbuffer.plot.series.name.set(newbuffer.comments.get())
                 newbuffer.plot.title.set(newbuffer.comments.get())
                 newbuffer.plot.axis.x.title.set("Time (s)")
@@ -497,11 +503,14 @@ class IO(object):
                 newbuffer.meta_dict = {'xData': Xdata, 'yData': Ydata,
                                        'stepName': StepName, 'actualTime': ActualTime, 'sensorType': SensorType,
                                        'stepStatus': StepStatus, 'stepType': StepType, 'concentration': Concentration,
-                                       'molarConcentration':MolarConcentration, 'sampleID':SampleID,
-                                       'wellType': WellType, 'mw': MW, 'flags':Flags, 'sampleGroup': SampleGroup,
-                                       'stepLocation': StepLoc, 'loadingSample': loadingsample, 'sensorInfo': SensorInfo,
-                                       'loadingStart':loadingstart, 'loadingEnd':loadingend, 'loadingWell':loadingwell,
-                                       'inFile':infile, 'sensorName':SensorName}
+                                       'molarConcentration': MolarConcentration, 'sampleID': SampleID,
+                                       'wellType': WellType, 'mw': MW, 'flags': Flags, 'sampleGroup': SampleGroup,
+                                       'sampleInfo': SampleInfo,
+                                       'stepLocation': StepLoc, 'loadingSample': loadingsample,
+                                       'sensorInfo': SensorInfo,
+                                       'loadingStart': loadingstart, 'loadingEnd': loadingend,
+                                       'loadingWell': loadingwell,
+                                       'inFile': infile, 'sensorName': SensorName}
                 self.data.matrix.add_buffer(newbuffer)
         self.colorallseries()
         return "ForteBio data read into memory."
