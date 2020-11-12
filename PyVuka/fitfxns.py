@@ -625,12 +625,12 @@ for j in range(len(X)):
             resid= np.array_split(result[i_idx].residual, group)
             # weights used are typically Y error vector
             weights = self.inst.data.matrix.buffer(i).data.ye.get()
-            # Residuals are squared in fit minimization and multiplied by the weight vector.  Here we reverse those calculations
+            # Residuals are multiplied by the weight vector in the minimization calculation.  Here we reverse that
             try:
-                unweighted_resid = np.power(resid[grp_cnt], 0.5) if len(weights) <= 1 else np.power(resid[grp_cnt], 0.5) / weights
+                unweighted_resid = resid[grp_cnt] if len(weights) <= 1 else resid[grp_cnt] / weights
             except:
                 weights = np.nan_to_num(weights, nan=1.0)
-                unweighted_resid = np.power(resid[grp_cnt], 0.5) if len(weights) <= 1 else np.power(resid[grp_cnt], 0.5) / weights
+                unweighted_resid = resid[grp_cnt] if len(weights) <= 1 else resid[grp_cnt] / weights
             self.inst.data.matrix.buffer(i).residuals.y.set(unweighted_resid)
             self.inst.data.matrix.buffer(i).residuals.x.set(self.inst.data.matrix.buffer(i).data.x.get())
             for j_idx in range(len(self.paramid)):
@@ -665,6 +665,7 @@ def is_integer(input):
     except ValueError:
         return False
     return True
+
 
 def eval_objective(params, y_matrix, idx, param_dict):  # calculate residuals to determine if the parameters are improving the fit
     '''param_dict = param_dict = {'x_vec': X_vec, 'y_vec': Y_vec, 'z_vec': Z_vec, 'p_vec':P_vec, 'y_matrix': Y_matrix,
@@ -719,9 +720,10 @@ def eval_objective(params, y_matrix, idx, param_dict):  # calculate residuals to
         R = np.array(R)
 
         resid_line = (Y - R) if len(weights) <= 1 else (Y - R) * weights
-        resid[i, :] = np.power(resid_line, 2)
+        resid[i, :] = resid_line
     # now flatten this to a 1D array, as minimize() needs
     return resid.flatten()
+
 
 def optimizer(param_dict, idx_list):
     result = []
@@ -735,6 +737,7 @@ def optimizer(param_dict, idx_list):
         result.append(minimize(eval_objective, parameters, args=(param_dict['y_matrix'][idx], idx, param_dict),
                  iter_cb=iter_cb, method=method, maxfev=max_iter, nan_policy='omit'))
     return result
+
 
 def multi_fit(param_dict):
     '''param_dict = {'x_vec': X_vec, 'y_vec': Y_vec, 'z_vec': Z_vec, 'p_vec':P_vec, 'y_matrix': Y_matrix,
