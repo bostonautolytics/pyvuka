@@ -752,7 +752,7 @@ def multi_fit(param_dict):
     if cpu_num > 1:
         group = param_dict['group']
         seg_size = int(np.floor(np.floor(len(idx_list) / group) / cpu_num) * group)
-        seg_idx_list = [idx_list[i*seg_size:(i+1)*seg_size] if ((i+2)*seg_size) <= len(idx_list) else idx_list[i*seg_size:] for i in range(cpu_num)]
+        seg_idx_list = [idx_list[i*seg_size:(i+1)*seg_size] if ((i+2)*seg_size) < len(idx_list) else idx_list[i*seg_size:] for i in range(cpu_num)]
         print(f'Generating Workers (cores:{cpu_num})...')
         proc_pool = mp.Pool(cpu_num)
         print('Fitting data in multiprocessing mode...')
