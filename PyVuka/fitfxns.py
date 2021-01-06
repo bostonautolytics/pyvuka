@@ -747,12 +747,21 @@ def multi_fit(param_dict):
                           'ind_fit': ind_fit, 'iter_cb': iter_cb, 'max_iter': max_iter}'''
     idx_list = [*range(len(param_dict['x_vec']))]
     func = partial(optimizer, param_dict)
-    cpu_num = int(min(mp.cpu_count()-1, param_dict['cpu'], len(idx_list)))
+    cpu_num = int(min(mp.cpu_count() - 1, param_dict['cpu'], len(idx_list)))
+    group = param_dict['group']
+    seg_size = int(np.max([np.floor(np.floor(len(idx_list) / group) / cpu_num), 1]) * group)
+    # for global fitting group size needs to be taken into account for cpu usage (groups chunk together)
+    cpu_num = int(min(np.floor(len(idx_list) / seg_size), cpu_num))
     results = []
     if cpu_num > 1:
-        group = param_dict['group']
-        seg_size = int(np.floor(np.floor(len(idx_list) / group) / cpu_num) * group)
-        seg_idx_list = [idx_list[i*seg_size:(i+1)*seg_size] if ((i+2)*seg_size) < len(idx_list) else idx_list[i*seg_size:] for i in range(cpu_num)]
+        seg_idx_list = [[]] * cpu_num
+        # fill multiproc chunks
+        for i in range(len(seg_idx_list)):
+            if i == len(seg_idx_list) - 1:
+                seg_idx_list[i] = idx_list[i * seg_size:]
+            else:
+                seg_idx_list[i] = idx_list[i * seg_size:(i + 1) * seg_size]
+
         print(f'Generating Workers (cores:{cpu_num})...')
         proc_pool = mp.Pool(cpu_num)
         print('Fitting data in multiprocessing mode...')
@@ -760,7 +769,7 @@ def multi_fit(param_dict):
         proc_pool.close()
         proc_pool.join()
         results = list(itertools.chain.from_iterable(results.get()))
-    else: # Avoid multiprocessing overhead
+    else:  # Avoid multiprocessing overhead
         print(f'Fitting data in single core mode...')
         results = [func([idx])[0] for idx in idx_list]
     return results
