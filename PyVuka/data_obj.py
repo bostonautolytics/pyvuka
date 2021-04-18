@@ -532,6 +532,7 @@ class Buffer(object):
             self.function_index = self._base_list()
             self.parameter = self._base_list()
             self.parameter_error = self._base_list()
+            self.parameter_bounds = self._base_bounds()
             self.chisq = self._base_float()
             self.rsq = self._base_float()
             self.link = self._base_list()
@@ -566,6 +567,32 @@ class Buffer(object):
             def set(self, input_list: iter):
                 if is_iterable(input_list):
                     self.__base = list(input_list)
+                else:
+                    raise ValueError(f"Input is {type(input_list)}, not List or Tuple!")
+
+        class _base_bounds(object):
+            def __init__(self):
+                self.__base = []
+
+            def __len__(self):
+                self.length()
+
+            def length(self):
+                return len(self.__base)
+
+            def get(self):
+                return self.__base
+
+            def set(self, input_list: iter):
+                if is_iterable(input_list):
+                    to_store = []
+                    is_itr_list = False if False in [True if is_iterable(i) and len(i)==2 else False for i in input_list] else True
+                    if is_itr_list:
+                        for itr in input_list:
+                            to_store.append((min(itr), max(itr)))
+                        self.__base = list(input_list)
+                    else:
+                        raise ValueError(f"Boundary Limits are of invalid format!")
                 else:
                     raise ValueError(f"Input is {type(input_list)}, not List or Tuple!")
 
