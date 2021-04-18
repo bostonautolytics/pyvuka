@@ -427,6 +427,9 @@ for j in range(len(X)):
                 fitparams.clear()
                 fitparams.update(self.inst.data.matrix.buffer(k).fit.function_index.get())
                 p_init= self.inst.data.matrix.buffer(k).fit.parameter.get()
+                p_usr_bounds = self.inst.data.matrix.buffer(k).fit.parameter_bounds.get()
+                fitparams.parambounds = p_usr_bounds if len(p_usr_bounds) == len(fitparams.parambounds) else fitparams.parambounds
+
                 if len(p_init) == 0:
                     return "Invalid Parameters!  Try Function: ap ."
 
