@@ -23,7 +23,7 @@ buffer.plot.axis.y.title.set("random float")
 pvk.add_buffer_to_datamatrix(buffer)  # add buffer to data matrix
 pvk.run_pyvuka_command('fun 27 0')  # select function 27 (Y=mx+b) ; in app mode type 'fun' to see list of available functions
 pvk.run_pyvuka_command('ap 1 1 1 1')  # alter parameters of function 27. "For buffer 1 through buffer 1, slope guess = 1, y-intercept guess = 1"
-pvk.run_pyvuka_command('fit')  # fit all data in matrix with function 27
+pvk.run_pyvuka_command('fit 100')  # fit all data in matrix with function 27, use maximum of 100 iterations
 pvk.show_plot(1) # Show plot of buffer 1 on screen and save to drive
 pvk.save_plot(1, "test.png")
 ```
