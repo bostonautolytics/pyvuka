@@ -28,7 +28,7 @@ pvk.show_plot(1) # Show plot of buffer 1 on screen and save to drive
 pvk.save_plot(1, "test.png")
 ```
 #### Ouput
-<img src="http://www.bostonautolytics.com/assets/img/test_show.png" alt="Saved Imaged" />
+<img src="http://www.bostonautolytics.com/assets/img/test.png" alt="Saved Imaged" />
 <img src="http://www.bostonautolytics.com/assets/img/test.png" alt="Saved Imaged" />
 
 ## Example of using PyVuka as a command line program
