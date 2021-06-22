@@ -17,6 +17,7 @@ rcParams.update({'figure.autolayout': True})
 
 class IO(object):
     def __init__(self, data_instance):
+        self.inst = data_instance
         self.data = data_instance.data
 
     def writepvk(self, filename):
@@ -591,16 +592,16 @@ class IO(object):
         if 'Yscale' in kwargs and kwargs['Yscale'].lower().strip() == 'common':
             ymax = 0
             ymin = 0
-            for i in range(1, self.inst.data.matrix.length() + 1):
+            for i in range(1, self.inst.data.matrix.length()+1):
                 y_vec = self.inst.data.matrix.buffer(i).data.y.get()
                 ymax = np.max(y_vec) if ymax < max(y_vec) else ymax
                 ymin = np.min(y_vec) if ymin > min(y_vec) else ymin
-            for i in range(1, self.inst.data.matrix.length() + 1):
-                self.inst.data.matrix.buffer(i).plot.axis.y.range.set([ymin * 1.05, ymax * 1.05])
+            for i in range(1, self.inst.data.matrix.length()+1):
+                self.inst.data.matrix.buffer(i).plot.axis.y.range.set([ymin*1.05, ymax*1.05])
 
         if 'color' in kwargs:
             c = kwargs['color']
-            for i in range(1, self.inst.data.matrix.length() + 1):
+            for i in range(1, self.inst.data.matrix.length()+1):
                 self.inst.data.matrix.buffer(i).plot.series.color.set(c)
                 self.inst.data.matrix.buffer(i).model.color.set('k')
 
@@ -642,7 +643,7 @@ class IO(object):
         for i in range(1, self.data.matrix.length() + 1):
             xlsx = xlsx_out(filename[:-5] + f"_sensor{i}_raw.xlsx")
             xlsx.sheet_name = "Output"
-            xlsx.add_line([buffer.plot.series.name.get(), 'X', 'Y', 'X-breaks'])  # header
+            xlsx.add_line([buffer.plot.series.name.get(), 'X', 'Y', 'X-breaks']) #header
             buffer = self.data.matrix.buffer(i)
             tbufx = buffer.data.x.get()
             tbufy = buffer.data.y.get()

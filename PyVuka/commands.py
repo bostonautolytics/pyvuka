@@ -326,9 +326,10 @@ class Command(object):
         try:
             fio = fileio.IO(self.inst)
             if "-txt" in userflags:
-                    return "No txt file structure programmed!"
+                return "No txt file structure programmed!"
             elif "-xlsx" in userflags:
-                fio.writexlsx(filetowrite, sheet_name='Output', header_list=[], col_width_list=[], row_heights=300, color='r', Yscale='common')
+                fio.writexlsx(filetowrite, sheet_name='Output', header_list=[], col_width_list=[], row_heights=300,
+                              color='r', Yscale='common')
             else:
                 return "Invalid file type or structure given!"
         except:
