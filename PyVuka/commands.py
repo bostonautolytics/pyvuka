@@ -1,6 +1,9 @@
 import sys
 import os.path
-from . import plot, fitfxns, fileio, Modules, numericalmethods, inputprocessing
+try:
+    from . import plot, fitfxns, fileio, Modules, numericalmethods, inputprocessing
+except:
+    import plot, fitfxns, fileio, Modules, numericalmethods, inputprocessing # required for running directly
 import math
 import numpy as np
 import copy
@@ -19,7 +22,7 @@ class Command(object):
         if line is None or line == '':
             return ''
         cmd, args = self.__parse_cmd_line(line)
-        safe_commands = ['read', 'rea', 'exec', 'cwd']
+        safe_commands = ['read', 'rea', 'exec', 'cwd', 'sim']
         if cmd in self._quit_cmd:
             return False
         elif cmd in self._help_cmd:
@@ -325,7 +328,7 @@ class Command(object):
             if "-txt" in userflags:
                     return "No txt file structure programmed!"
             elif "-xlsx" in userflags:
-                fio.writexlsx(filetowrite, sheet_name='Output', header_list=[], col_width_list=[], row_heights=152)
+                fio.writexlsx(filetowrite, sheet_name='Output', header_list=[], col_width_list=[], row_heights=300, color='r', Yscale='common')
             else:
                 return "Invalid file type or structure given!"
         except:
@@ -891,6 +894,9 @@ class Command(object):
 
         inparse.userinput = [int(val) for val in inparse.userinput]
         firstbuffer, lastbuffer, const = inparse.userinput
+        firstbuffer = int(firstbuffer)
+        lastbuffer = int(lastbuffer)
+        const = float(const)
 
         for i in range(firstbuffer, lastbuffer + 1):
             buffer = self.inst.data.matrix.buffer(i)
@@ -1220,7 +1226,23 @@ class Command(object):
             "\nInvalid Functions Specified!"
 
     def do_fit(self, *args):
+        """\nCommand: FIT\n
+        Description: Minimizes parameters of model to fit data
+
+        Example Usage:
+        \tfit            (fit data with up to 2000 iterations)
+        \tfit 100        (fit data with up to 100 iterations)
+
+        Default Input: fit 2000
+
+        Default Options: N/A
+
+        Options: N/A"""
         args = [val.lower() for val in args]
+        inparse = inputprocessing.InputParser()
+        inparse(args)
+        if len(inparse.userinput) == 0:
+            args.append('2000')
         ### Pre-flight check for any parameter linking ###
         linked = False
         plon = False
@@ -1825,6 +1847,251 @@ class Command(object):
             print(f'{str(key)}: {str(value)}')
 
         return "\n Showing Details of Buffer: " + str(buf)
+
+    def do_sim(self, *args):
+        """\nCommand: SIMulate data\n
+               Description: Adds a buffer, calculates function with desired parameters, adds noise.
+
+               Example Usage:
+               \tsim   (Simulates data in a new Buffer)
+               \tsim 1 (Simulates data from model in Buffer 1, appended as new buffer)
+               \tsim 1 3 (Simulates data from models in Buffer 1 through 3, appended as new buffers)
+
+               Default Input: sim -mean 0 -stdev 1 -scalar 1 -points 300
+
+               Default Options:
+               \t-mean
+               \t-stdev
+               \t-scalar
+               \t-points
+
+               Options: N/A
+               """
+
+        def __parse_input(args):
+            inparse = inputprocessing.InputParser()
+            if not inparse(args):
+                return "Invalid input!"
+            userflags = inparse.cmdflags
+            comparams = inparse.userinput
+            start_buffer = -1
+            end_buffer = -1
+
+            if len(comparams) == len(userflags) + 1:
+                start_buffer = int(comparams[0]) if int(comparams[0]) >= 1 else 1
+                end_buffer = start_buffer
+                comparams = comparams[1:]
+            elif len(comparams) == len(userflags) + 2:
+                buf_min = int(comparams[0]) if int(comparams[0]) >= 1 else 1
+                buf_max = int(comparams[1]) if int(comparams[1]) >= 1 else buf_min
+                start_buffer = min([buf_min, buf_max])
+                end_buffer = max([buf_min, buf_max])
+                comparams = comparams[2:]
+
+            mean = 0 if '-mean' not in userflags else comparams[userflags.index('-mean')]
+            stdev = 1 if '-stdev' not in userflags else comparams[userflags.index('-stdev')]
+            scalar = 1 if '-scalar' not in userflags else comparams[userflags.index('-scalar')]
+            points = 300 if '-points' not in userflags else comparams[userflags.index('-points')]
+            return start_buffer, end_buffer, mean, stdev, scalar, points
+
+        start_buffer, end_buffer, mean, stdev, scalar, points = __parse_input(args)
+        if self.inst.data.matrix.length() == 0 or (start_buffer == -1 and end_buffer == -1):
+            new_buffer = self.inst.new_buffer()
+            fxn = input("Enter function number to be simulated: ")
+            start_x = float(input("Minimum value of x-range: "))
+            stop_x = float(input("Maximum value of x-range: "))
+            data_pts = np.linspace(min([start_x, stop_x]), max([start_x, stop_x]), points)
+            new_buffer.data.x.set(data_pts)
+            new_buffer.data.y.set(data_pts)
+            new_buffer.data.z.set(data_pts)
+            self.inst.data.matrix.add_buffer(new_buffer)
+            fxn = fxn + ' 0' if not fxn.strip().endswith(' 0') else fxn
+            print(self(f'fun {fxn}'))
+            print('\nSet parameters:\n')
+            self(f'ap {self.inst.data.matrix.length()}')
+            self(f'fix all')
+            self(f'fit 1')
+            new_buffer = self.inst.data.matrix.get()[-1]
+            noise = np.random.normal(mean, stdev, len(new_buffer.model.y.get())) * scalar
+            new_buffer.data.x.set(new_buffer.model.x.get()[:points])
+            new_buffer.data.y.set(new_buffer.model.y.get()[:points] + noise[:points])
+            new_buffer.data.z.set(new_buffer.model.z.get()[:points])
+            new_buffer.model.x.set([])
+            new_buffer.model.y.clear()
+            new_buffer.model.z.clear()
+            new_buffer.residuals.x.set([])
+            new_buffer.residuals.y.clear()
+            new_buffer.residuals.z.clear()
+            color = ['red', 'orange', 'gold', 'green', 'blue', 'purple', 'violet', 'magenta']
+            new_buffer.plot.series.color.set(color[self.inst.data.matrix.length() - 1])
+            self.inst.data.matrix.set_buffer_by_number(new_buffer, self.inst.data.matrix.length())
+        return "\n Showing Details of Buffer: "
+
+    def do_pea(self, *args):
+        """\nCommand: PEAk Pick\n
+               Description: Detects peaks and adds them to peak data in each buffer
+
+               Example Usage:
+               \tpea 1 1 (Picks peaks for buffer 1)
+               \tpea 1 2
+
+               Default Input: pea
+
+               Default Options:
+               N/A
+
+               Options: N/A
+               """
+
+        inparse = inputprocessing.InputParser()
+        lastbuffer = self.inst.data.matrix.length()
+
+        inparse.prompt = ["First Buffer", "Last Buffer", "Number Peaks", "Threshold", "positive_peaks", "resolution"]
+        inparse.inputbounds = [[1, lastbuffer], [1, lastbuffer], [1, np.inf], [-np.inf, np.inf], [False, True],
+                               [1, np.inf]]
+        inparse.defaultinput = [1, lastbuffer, 1, 1, True, 4]
+
+        if not inparse(args):
+            return "Invalid Input!"
+        if not inparse.getparams():
+            return "\nNo Data Was Multiplied!"
+
+        firstbuffer, lastbuffer, num_peaks, threshold, pos_peaks, res = inparse.userinput
+        firstbuffer = int(firstbuffer)
+        lastbuffer = int(lastbuffer)
+        threshold = float(threshold)
+        num_peaks = int(num_peaks)
+
+        new_buffer = self.inst.new_buffer()
+        all_peaks = []
+        for i in range(firstbuffer, lastbuffer + 1):
+            buffer = self.inst.data.matrix.buffer(i)
+            peaks = []
+            ydata = buffer.data.y.get()
+            xdata = buffer.data.x.get()
+            peak_x_values = numericalmethods.peak_pick(xdata, ydata, threshold, positive_peaks=bool(pos_peaks),
+                                                       resolution=int(res))
+            peak_idx = [np.where(xdata == v)[0][0] for v in peak_x_values][:num_peaks]
+            all_peaks.append([i, peak_x_values[:num_peaks]])
+            peaks.append(peak_idx)
+            self.inst.data.matrix.buffer(i).plot.axis.y.peaks.set(peaks)
+            self.inst.data.matrix.buffer(i).plot.axis.y.peaks.show()
+        print('\nPeaks picked:')
+        for i, p in enumerate(all_peaks):
+            for dp in p[1]:
+                new_buffer.data.x.append(p[0])
+                new_buffer.data.y.append(dp)
+            print(f'Buffer {i}:\t{str(p[1])[1:-1]}')
+        new_buffer.plot.axis.x.title.set('Buffer Number')
+        new_buffer.plot.axis.y.title.set('Peak Intensity')
+        self.inst.data.matrix.add_buffer(new_buffer)
+        return '\nPeaks Picked!'
+
+    def do_plop(self, *args):
+        """\nCommand: PLOt oPtions\n
+               Description: CLI control of plot display options
+
+               Example Usage:
+               \tplop 1 1 (change plot options for buffer 1 through 1)
+
+               Default Input: plop
+
+               Default Options:
+               N/A
+
+               Options: N/A
+               """
+
+        inparse = inputprocessing.InputParser()
+        lastbuffer = self.inst.data.matrix.length()
+
+        inparse.prompt = ["First Buffer", "Last Buffer", "Number Peaks", "%Threshold", "positive_peaks", "resolution"]
+        inparse.inputbounds = [[1, lastbuffer], [1, lastbuffer], [1, np.inf], [0.0, 100.0], [False, True], [1, np.inf]]
+        inparse.defaultinput = [1, lastbuffer, 1, 1, True, 4]
+        # 'plot_title': self.plot.title.get(),
+        # 'plot_type': self.plot.type.get(),
+        # 'plot_polygons': self.plot.polygons.get(),
+        # 'plot_use_weighted_residuals': self.plot.use_weighted_residuals,
+        # 'plot_series_name': self.plot.series.name.get(),
+        # 'plot_series_color': self.plot.series.color.get(),
+        # 'plot_series_type': self.plot.series.type.get(),
+        # 'plot_series_weight': self.plot.series.weight.get(),
+        # 'plot_x_title': self.plot.axis.x.title.get(),
+        # 'plot_x_type': self.plot.axis.x.axis_scale.get(),
+        # 'plot_x_integrals': self.plot.axis.x.integrals.get(),
+        # 'plot_x_lines': self.plot.axis.x.lines.get(),
+        # 'plot_x_peak_bounds': self.plot.axis.x.peak_bounds.get(),
+        # 'plot_x_peaks': self.plot.axis.x.peaks.get(),
+        # 'plot_x_range': self.plot.axis.x.range.get(),
+        # 'plot_y_title': self.plot.axis.y.title.get(),
+        # 'plot_y_type': self.plot.axis.y.axis_scale.get(),
+        # 'plot_y_integrals': self.plot.axis.y.integrals.get(),
+        # 'plot_y_lines': self.plot.axis.y.lines.get(),
+        # 'plot_y_peak_bounds': self.plot.axis.y.peak_bounds.get(),
+        # 'plot_y_peaks': self.plot.axis.y.peaks.get(),
+        # 'plot_y_range': self.plot.axis.y.range.get(),
+        # 'plot_z_title': self.plot.axis.z.title.get(),
+        # 'plot_z_type': self.plot.axis.z.axis_scale.get(),
+        # 'plot_z_integrals': self.plot.axis.z.integrals.get(),
+        # 'plot_z_lines': self.plot.axis.z.lines.get(),
+        # 'plot_z_peak_bounds': self.plot.axis.z.peak_bounds.get(),
+        # 'plot_z_peaks': self.plot.axis.z.peaks.get(),
+        # 'plot_z_range': self.plot.axis.z.range.get(),
+        return
+
+    def do_direct(self, *args):
+        """\nCommand: DIRECT python code\n
+               Description: CLI control matrix using native python
+
+               Example Usage:
+               \tdirect print(self.inst.data.matrix.length()) (print matrix length)
+
+               Default Input: N/A
+
+               Default Options: N/A
+
+               Options: N/A
+               """
+        args = str(' '.join(list(args)))
+        eval(args)
+        return 'Direct Python code executed!'
+
+    def do_rom(self, *args):
+        """\nCommand: Re-Organize Matrix\n
+               Description: Reorder buffers in matrix using input list of buffer numbers
+
+               Example Usage:
+               \trom 1, 3, 2, 4  (matrix 1,2,3,4 -> 1,3,2,4)
+
+               Default Input: N/A
+
+               Default Options: N/A
+
+               Options: N/A
+               """
+        args = str(','.join(list(args)))
+        try:
+            buffer_order = [int(b.strip()) for b in args.split(',') if len(b.strip()) > 0]
+        except Exception as e:
+            return 'Non-Integer value found in list for reorganization! No changes ot Matrix have been made!'
+        if max(buffer_order) <= self.inst.data.matrix.length() and min(buffer_order) >= 1:
+            # Lengthen matrix if required
+            if len(buffer_order) > self.inst.data.matrix.length():
+                for i in range(self.inst.data.matrix.length(),
+                               self.inst.data.matrix.length() + len(buffer_order) - self.inst.data.matrix.length()):
+                    self.inst.data.matrix.add_buffer(self.inst.data.matrix.buffer(1))
+            # copy existing matrix
+            old_matrix = copy.deepcopy(self.inst.data.matrix)
+            # Re-org matrix
+            for i, b in enumerate(buffer_order):
+                self.inst.data.matrix.set_buffer_by_number(copy.deepcopy(old_matrix.buffer(b)), i + 1)
+            # Crop matrix if required
+            if len(buffer_order) < self.inst.data.matrix.length():
+                for i in reversed(range(len(buffer_order), self.inst.data.matrix.length(), 1)):
+                    self.inst.data.matrix.remove_buffer_by_number(i + 1)
+            return 'Matrix Re-Organization complete!'
+        else:
+            return 'Some indicies in list are out of bounds of the current matrix! Matrix has not been altered!'
 
     def help(self, cmd=None):
         def std_help():

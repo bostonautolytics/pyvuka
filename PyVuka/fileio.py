@@ -418,10 +418,11 @@ class IO(object):
                 Flags = []
                 SampleGroup = []
                 StepLoc = []
-                loadingsample = ''
-                loadingstart = 0
-                loadingend = 0
-                loadingwell = ''
+                loadingsample = []
+                loadingstart = []
+                loadingend = []
+                loadingwell = []
+                loadingindex = []
                 infile = xmlio.parse(os.path.join(experimentdirectory, files)).getroot()
                 for expinfo in infile.findall('ExperimentInfo'):
                     SensorName = expinfo.find('SensorName').text
@@ -436,14 +437,11 @@ class IO(object):
                             Concentration.append(commondata.find('Concentration').text)
                             MolarConcentration.append(commondata.find('MolarConcentration').text)
                             SampleID.append(commondata.find('SampleID').text)
-                            if commondata.find('SampleGroup') is not None:
-                                SampleGroup.append(commondata.find('SampleGroup').text)
-                            else:
-                                SampleGroup.append(None)
-                            if commondata.find('SampleInfo') is not None:
-                                SampleInfo.append(commondata.find('SampleInfo').text)
-                            else:
-                                SampleInfo.append(None)
+                            SampleGroup.append(commondata.find('SampleGroup').text)
+                            SampleInfo.append(commondata.find('SampleInfo').text)
+                            # If sample id is blank and sample information is not, make SampleID = SampleInfo
+                            if SampleID[-1] is None and SampleInfo[-1] is not None:
+                                SampleID[-1] = str(SampleInfo[-1])
                             MW.append(commondata.find('MolecularWeight').text)
                             Xdata.append(np.array(array.array('f', base64.b64decode(stepdata.find('AssayXData').text))))
                             Ydata.append(np.array(array.array('f', base64.b64decode(stepdata.find('AssayYData').text))))
@@ -453,16 +451,15 @@ class IO(object):
                             StepLoc.append(commondata.find('SampleRow').text + commondata.find('SampleLocation').text)
                             StepType.append(stepdata.find('StepType').text)
                             if StepType[-1].upper() == 'LOADING' and SampleID[-1] is not None:
-                                loadingsample = SampleID[-1]
-                                loadingstart = Ydata[-1][0]
-                                loadingend = Ydata[-1][-1]
-                                loadingwell = StepLoc[-1]
+                                loadingsample.append(SampleID[-1])
+                                loadingstart.append(Ydata[-1][0])
+                                loadingend.append(Ydata[-1][-1])
+                                loadingwell.append(StepLoc[-1])
+                                loadingindex.append(len(StepType) - 1)
                 for status in StepStatus:
                     if not status == 'OK':
                         Flags.append('Sensor:' + status)
                         break
-
-                newbuffer = self.data.new_buffer()
 
                 ### copy and paste of 'interstepcorrection' method from historical fortebiopkg. edited to suit
                 for j in range(0, len(Ydata) - 1):
@@ -484,34 +481,52 @@ class IO(object):
                         for k in range(0, len(Xdata[j + 1])):
                             Xdata[j + 1][k] -= xdif
 
-                for segment in Xdata:
-                    newbuffer.data.x.append(segment)
-                    newbuffer.plot.axis.x.lines.append(segment[0])
+                X_lines = [seg[0] for seg in Xdata]
 
-                newbuffer.data.x.set(np.concatenate(Xdata, axis=None))
-                newbuffer.data.y.set(np.concatenate(Ydata, axis=None))
-                ###
-                newbuffer.data.z.set([z_value] * newbuffer.data.y.length())
-
-                newbuffer.comments.set([str(SensorInfo) + " on " + str(SensorType) + " vs " +
-                                        str(SampleID[-2]) + " @ " + str(MolarConcentration[-2]) + "nM"])
-                newbuffer.plot.series.name.set(newbuffer.comments.get())
-                newbuffer.plot.title.set(newbuffer.comments.get())
-                newbuffer.plot.axis.x.title.set("Time (s)")
-                newbuffer.plot.axis.y.title.set("Response (nm)")
-                newbuffer.plot.axis.x.lines.show()
-                newbuffer.meta_dict = {'xData': Xdata, 'yData': Ydata,
-                                       'stepName': StepName, 'actualTime': ActualTime, 'sensorType': SensorType,
-                                       'stepStatus': StepStatus, 'stepType': StepType, 'concentration': Concentration,
-                                       'molarConcentration': MolarConcentration, 'sampleID': SampleID,
-                                       'wellType': WellType, 'mw': MW, 'flags': Flags, 'sampleGroup': SampleGroup,
-                                       'sampleInfo': SampleInfo,
-                                       'stepLocation': StepLoc, 'loadingSample': loadingsample,
-                                       'sensorInfo': SensorInfo,
-                                       'loadingStart': loadingstart, 'loadingEnd': loadingend,
-                                       'loadingWell': loadingwell,
-                                       'inFile': infile, 'sensorName': SensorName}
-                self.data.matrix.add_buffer(newbuffer)
+                buffer_splits = len(loadingindex) if len(loadingindex) > 1 else 1
+                start_idx = 0
+                for i in range(0, buffer_splits, 1):
+                    newbuffer = self.data.new_buffer()
+                    split_idx = loadingindex[i + 1] - 1 if i + 1 < len(loadingindex) else len(StepType)
+                    newbuffer.plot.axis.x.lines.set(X_lines[start_idx:split_idx])
+                    newbuffer.data.x.set(np.concatenate(Xdata[start_idx:split_idx], axis=None))
+                    newbuffer.data.y.set(np.concatenate(Ydata[start_idx:split_idx], axis=None))
+                    newbuffer.data.z.set([z_value] * newbuffer.data.y.length())
+                    SensorInfo = SensorInfo if len(loadingsample) < 1 else SampleID[loadingindex[i]]
+                    Association_idx = StepType[start_idx:split_idx].index('ASSOC') + start_idx if 'ASSOC' in StepType[start_idx:split_idx] else -2
+                    newbuffer.comments.set([str(SensorInfo) + " on " + str(SensorType) + " vs " +
+                                            str(SampleID[Association_idx]) + " @ " +
+                                            str(MolarConcentration[Association_idx]) + "nM"])
+                    newbuffer.plot.series.name.set(newbuffer.comments.get())
+                    newbuffer.plot.title.set(newbuffer.comments.get())
+                    newbuffer.plot.axis.x.title.set("Time (s)")
+                    newbuffer.plot.axis.y.title.set("Response (nm)")
+                    newbuffer.plot.axis.x.lines.show()
+                    newbuffer.plot.axis.x.label.size.set(20)
+                    newbuffer.plot.axis.y.label.size.set(20)
+                    try:
+                        newbuffer.meta_dict = {'xData': Xdata, 'yData': Ydata,
+                                               'stepName': StepName[start_idx:split_idx],
+                                               'actualTime': ActualTime[start_idx:split_idx], 'sensorType': SensorType,
+                                               'stepStatus': StepStatus[start_idx:split_idx],
+                                               'stepType': StepType[start_idx:split_idx],
+                                               'concentration': Concentration[start_idx:split_idx],
+                                               'molarConcentration': MolarConcentration[start_idx:split_idx],
+                                               'sampleID': SampleID[start_idx:split_idx],
+                                               'wellType': WellType[start_idx:split_idx], 'mw': MW[start_idx:split_idx],
+                                               'flags': Flags, 'sampleGroup': SampleGroup[start_idx:split_idx],
+                                               'sampleInfo': SampleInfo[start_idx:split_idx],
+                                               'stepLocation': StepLoc[start_idx:split_idx],
+                                               'loadingSample': loadingsample[i] if loadingsample else 'None',
+                                               'sensorInfo': SensorInfo,
+                                               'loadingStart': loadingstart[i] if loadingstart else 'None',
+                                               'loadingEnd': loadingend[i] if loadingend else 'None',
+                                               'loadingWell': loadingwell[i] if loadingwell else 'None',
+                                               'inFile': infile, 'sensorName': SensorName}
+                    except Exception as e:
+                        print(str(e))
+                    self.data.matrix.add_buffer(newbuffer)
+                    start_idx = split_idx + 1
         self.colorallseries()
         return "ForteBio data read into memory."
 
@@ -525,11 +540,11 @@ class IO(object):
                 filename = os.path.join(experimentdirectory, files)
                 concentration = filename.split('[')[1].split(']')[0]
                 if concentration[-2:] == "ng":
-                    concentration = float(concentration[:-2])*1E-9
+                    concentration = float(concentration[:-2]) * 1E-9
                 elif concentration[-2:] == "ug":
-                    concentration = float(concentration[:-2])*1E-6
+                    concentration = float(concentration[:-2]) * 1E-6
                 elif concentration[-2:] == "mg":
-                    concentration = float(concentration[:-2])*1E-3
+                    concentration = float(concentration[:-2]) * 1E-3
                 with open(filename) as rawdata:
                     datalines = rawdata.readlines()
                     readdata = False
@@ -554,11 +569,12 @@ class IO(object):
                 filecount += 1
         for i in range(len(experiment["Well"])):
             newbuffer = self.data.new_buffer()
-            experiment["Concentration"][i], experiment["Y_Signal"][i] = (list(t) for t in zip(*sorted(zip(experiment["Concentration"][i], experiment["Y_Signal"][i]))))
+            experiment["Concentration"][i], experiment["Y_Signal"][i] = (list(t) for t in zip(
+                *sorted(zip(experiment["Concentration"][i], experiment["Y_Signal"][i]))))
             newbuffer.data.x.set(experiment["Concentration"][i])
             newbuffer.data.y.set(experiment["Y_Signal"][i])
             newbuffer.plot.series.name.set(experiment["Sample_ID"][i] + " (Well: " + experiment["Well"][i] + ")")
-            newbuffer.comments.add("Well: "+experiment["Well"][i])
+            newbuffer.comments.add("Well: " + experiment["Well"][i])
             newbuffer.comments.add("Sample_ID: " + experiment["Sample_ID"][i])
             self.data.matrix.add_buffer(newbuffer)
         self.colorallseries()
@@ -572,9 +588,25 @@ class IO(object):
         xlsx.set_col_widths(kwargs.get("col_width_list"))
         xlsx.set_row_heights(kwargs.get("row_heights"))
 
-        plot_out = plot.plotter()
+        if 'Yscale' in kwargs and kwargs['Yscale'].lower().strip() == 'common':
+            ymax = 0
+            ymin = 0
+            for i in range(1, self.inst.data.matrix.length() + 1):
+                y_vec = self.inst.data.matrix.buffer(i).data.y.get()
+                ymax = np.max(y_vec) if ymax < max(y_vec) else ymax
+                ymin = np.min(y_vec) if ymin > min(y_vec) else ymin
+            for i in range(1, self.inst.data.matrix.length() + 1):
+                self.inst.data.matrix.buffer(i).plot.axis.y.range.set([ymin * 1.05, ymax * 1.05])
 
-        fitter = fitfxns.datafit()
+        if 'color' in kwargs:
+            c = kwargs['color']
+            for i in range(1, self.inst.data.matrix.length() + 1):
+                self.inst.data.matrix.buffer(i).plot.series.color.set(c)
+                self.inst.data.matrix.buffer(i).model.color.set('k')
+
+        plot_out = plot.plotter(self.data)
+
+        fitter = fitfxns.datafit(self.inst)
         fitter.funcindex = self.data.matrix.buffer(1).fit.function_index.get()
         fitter.applyfxns()
 
@@ -610,7 +642,7 @@ class IO(object):
         for i in range(1, self.data.matrix.length() + 1):
             xlsx = xlsx_out(filename[:-5] + f"_sensor{i}_raw.xlsx")
             xlsx.sheet_name = "Output"
-            xlsx.add_line([buffer.plot.series.name.get(), 'X', 'Y', 'X-breaks']) #header
+            xlsx.add_line([buffer.plot.series.name.get(), 'X', 'Y', 'X-breaks'])  # header
             buffer = self.data.matrix.buffer(i)
             tbufx = buffer.data.x.get()
             tbufy = buffer.data.y.get()

@@ -457,8 +457,7 @@ class Buffer(object):
                 self.__color_val = color
 
             def get(self):
-                if len(str(self.__color_val)) > 0 and str(self.__color_val)[0] == '(' and str(self.__color_val)[
-                    -1] == ')':
+                if len(str(self.__color_val)) > 0 and str(self.__color_val)[0] == '(' and str(self.__color_val)[-1] == ')':
                     return tuple(self.__color_val)
                 return self.__color_val
 

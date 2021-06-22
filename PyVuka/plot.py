@@ -256,7 +256,7 @@ class plotter(object):
         y_lines = buffer.plot.axis.y.lines.get()
         show_peaks = buffer.plot.axis.y.peaks.is_visible
         peak_indicies = buffer.plot.axis.y.peaks.get()
-        peaks = [Y[p] for p in peak_indicies]
+        peaks = [Y[p] for p in peak_indicies] if peak_indicies.any() else []
         show_peak_bounds = buffer.plot.axis.y.peak_bounds.is_visible
         peak_bounds_indicies = buffer.plot.axis.y.peak_bounds.get()
         show_integrals = buffer.plot.axis.x.integrals.is_visible
@@ -266,8 +266,8 @@ class plotter(object):
         x_axis_type = buffer.plot.axis.x.axis_scale.get()
         y_axis_type = buffer.plot.axis.y.axis_scale.get()
         z_axis_type = buffer.plot.axis.z.axis_scale.get()
-        x_axis_range = buffer.plot.axis.x.range.get() if len(buffer.plot.axis.x.range.get()) > 1 else buffer.data.x.range()
-        y_axis_range = buffer.plot.axis.y.range.get() if len(buffer.plot.axis.y.range.get()) > 1 else buffer.data.y.range()
+        x_axis_range = buffer.plot.axis.x.range.get() if len(buffer.plot.axis.x.range.get()) > 1 else self.__global_xlim
+        y_axis_range = buffer.plot.axis.y.range.get() if len(buffer.plot.axis.y.range.get()) > 1 else self.__global_ylim
         z_axis_range = buffer.plot.axis.z.range.get() if len(buffer.plot.axis.z.range.get()) > 1 else buffer.data.z.range()
         # ___________________________________#
         # END Local Variable Definitions    #
@@ -501,22 +501,35 @@ class plotter(object):
         for num in pltarray:
             if int(num) > len(self.inst.matrix._Matrix__buffer_list):
                 continue
-            buffer = self.inst.matrix._Matrix__buffer_list[num-1]
+            buffer = self.inst.matrix._Matrix__buffer_list[num - 1]
+            buffer_x_min = buffer.data.x.min()
+            buffer_x_max = buffer.data.x.max()
+            buffer_y_min = buffer.data.y.min()
+            buffer_y_max = buffer.data.y.max()
+            buffer_model_y_min = buffer.model.y.min()
+            buffer_model_y_max = buffer.model.y.max()
+            buffer_resid_y_min = buffer.residuals.y.min()
+            buffer_resid_y_max = buffer.residuals.y.max()
             if self.inst.matrix.buffer(num).data.x.length() > 0:
-                if np.isfinite(buffer.data.x.min()) and buffer.data.x.min() <= xmin:
-                    xmin = buffer.data.x.min()
-                if np.isfinite(buffer.data.x.max()) and buffer.data.x.max() >= xmax:
-                    xmax = buffer.data.x.max()
+                if np.isfinite(buffer_x_min) and buffer_x_min <= xmin:
+                    xmin = buffer_x_min
+                if np.isfinite(buffer_x_max) and buffer_x_max >= xmax:
+                    xmax = buffer_x_max
             if buffer.data.y.length() > 0:
-                if np.isfinite(buffer.data.y.min()) and buffer.data.y.min() <= ymin:
-                    ymin = buffer.data.y.min()
-                if np.isfinite(buffer.data.y.max()) and buffer.data.y.max() >= ymax:
-                    ymax = buffer.data.y.max()
+                if np.isfinite(buffer_y_min) and buffer_y_min <= ymin:
+                    ymin = buffer_y_min
+                if np.isfinite(buffer_y_max) and buffer_y_max >= ymax:
+                    ymax = buffer_y_max
+            if buffer.model.y.length() > 0:
+                if np.isfinite(buffer_model_y_max) and buffer_model_y_max <= ymin:
+                    ymin = buffer_model_y_max
+                if np.isfinite(buffer_y_max) and buffer_y_max >= ymax:
+                    ymax = buffer_y_max
             if buffer.residuals.y.length() > 0:
-                if np.isfinite(buffer.residuals.y.min()) and buffer.residuals.y.min() <= ymin_res:
-                    ymin_res = buffer.residuals.y.min()
-                if np.isfinite(buffer.residuals.y.max()) and buffer.residuals.y.max() >= ymax_res:
-                    ymax_res = buffer.residuals.y.max()
+                if np.isfinite(buffer_resid_y_min) and buffer_resid_y_min <= ymin_res:
+                    ymin_res = buffer_resid_y_min
+                if np.isfinite(buffer_resid_y_max) and buffer_resid_y_max >= ymax_res:
+                    ymax_res = buffer_resid_y_max
 
         self.__global_xlim = (xmin, xmax)
         self.__global_ylim = (ymin, ymax)
