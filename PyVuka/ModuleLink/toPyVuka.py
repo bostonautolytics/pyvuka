@@ -19,7 +19,10 @@
 # The PyVuka data buffer matrix is a list of object_buffer dictionaries
 #
 #######################################################################################################################
-from .. import commands, plot, data_obj
+try:
+    from .. import commands, plot, data_obj
+except:
+    import commands, plot, data_obj
 from PIL import Image
 from io import BytesIO as BIO
 import os
@@ -35,7 +38,7 @@ class new_instance:
         self.plot = plot.plotter(self.data)
 
     def clear_all(self):
-        self.data = data.init()
+        self.data = data_obj.init()
 
     def new_datamatrix(self):
         return self.data.new_matrix()
