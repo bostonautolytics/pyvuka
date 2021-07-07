@@ -893,7 +893,6 @@ class Command(object):
         if not inparse.getparams():
             return "\nNo Data Was Multiplied!"
 
-        inparse.userinput = [int(val) for val in inparse.userinput]
         firstbuffer, lastbuffer, const = inparse.userinput
         firstbuffer = int(firstbuffer)
         lastbuffer = int(lastbuffer)
