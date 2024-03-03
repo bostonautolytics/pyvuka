@@ -287,10 +287,11 @@ class Command(object):
         Example Usage:
         \twri -txt  c:\data\data.txt (Wrtie matrix to tab delimited txt)
         \twri -xlsx c:\data\data.txt (Write matrix to xlsx file with figures)
+        \twri -xlsx c:\data\data.txt -color='red' (Write matrix to xlsx file with figures plotted series in red for each figure)
 
         Default Input: N/A
 
-        Default Options: -txt -xy  (if no file format given and extension matches a format, the xlsx extension will be used)
+        Default Options: -txt (if no file format given and extension matches a format, the xlsx extension will be used)
 
         Usage Options:
         \tN/A
@@ -328,8 +329,12 @@ class Command(object):
             if "-txt" in userflags:
                 return "No txt file structure programmed!"
             elif "-xlsx" in userflags:
-                fio.writexlsx(filetowrite, sheet_name='Output', header_list=[], col_width_list=[], row_heights=300,
-                              color='r', Yscale='common')
+                for f in userflags:
+                    if '-color=' in f:
+                        c = f.split('=')[-1].strip()
+                    else:
+                        c = None
+                fio.writexlsx(filetowrite, sheet_name='Output', header_list=[], col_width_list=[], row_heights=300, color=c, Yscale='common')
             else:
                 return "Invalid file type or structure given!"
         except:

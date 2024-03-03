@@ -477,7 +477,7 @@ class plotter(object):
         BIOstream.seek(0)
         im = Image.open(BIOstream)
         im2 = im.convert('RGB').convert('P', palette=Image.ADAPTIVE)
-        im2 = im2.resize(im2.size, Image.ANTIALIAS)
+        im2 = im2.resize(im2.size)
         BIOstream = BIO()
         im2.save(BIOstream, format='PNG', quality=95)
         BIOstream.seek(0)

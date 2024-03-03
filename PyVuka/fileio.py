@@ -599,10 +599,9 @@ class IO(object):
             for i in range(1, self.inst.data.matrix.length()+1):
                 self.inst.data.matrix.buffer(i).plot.axis.y.range.set([ymin*1.05, ymax*1.05])
 
-        if 'color' in kwargs:
-            c = kwargs['color']
+        if 'color' in kwargs and kwargs['color'] is not None:
             for i in range(1, self.inst.data.matrix.length()+1):
-                self.inst.data.matrix.buffer(i).plot.series.color.set(c)
+                self.inst.data.matrix.buffer(i).plot.series.color.set(kwargs['color'])
                 self.inst.data.matrix.buffer(i).model.color.set('k')
 
         plot_out = plot.plotter(self.data)
@@ -641,7 +640,7 @@ class IO(object):
         xlsx.write_xlsx()
 
         for i in range(1, self.data.matrix.length() + 1):
-            xlsx = xlsx_out(filename[:-5] + f"_sensor{i}_raw.xlsx")
+            xlsx = xlsx_out(filename[:-5] + f"_buffer{i}_raw.xlsx")
             xlsx.sheet_name = "Output"
             xlsx.add_line([buffer.plot.series.name.get(), 'X', 'Y', 'X-breaks']) #header
             buffer = self.data.matrix.buffer(i)
@@ -791,4 +790,3 @@ def predict_encoding(file_path, n_lines=20):
         # Join binary lines for specified number of lines
         rawdata = b''.join([f.readline() for _ in range(n_lines)])
     return chardet.detect(rawdata)['encoding']
-

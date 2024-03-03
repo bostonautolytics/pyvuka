@@ -10,16 +10,18 @@ import sys
 import os
 try:
     from .ModuleLink import toPyVuka as pyvuka
+except RuntimeError:
+    raise
 except:
     from ModuleLink import toPyVuka as pyvuka  # to run directly
 
 __author__ = "R. Paul Nobrega"
 __app_name__ = "PyVuka"
 __description__ = "A General Purpose Global Data Analysis Package"
-__copyright__ = "Copyright 2017, www.BostonAutoLytics.com"
+__copyright__ = "Copyright 2024, www.BostonAutoLytics.com"
 __credits__ = "R. Paul Nobrega, Osman Bilsel, & David G. Lambright"
 __license__ = "GPL"
-__version__ = "0.1.0.82"
+__version__ = "0.1.1.0"
 __maintainer__ = "R. Paul Nobrega"
 __email__ = "Paul@BostonAutoLytics.com"
 __status__ = "Development"

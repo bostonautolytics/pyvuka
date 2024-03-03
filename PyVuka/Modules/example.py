@@ -9,7 +9,6 @@ import os
 from .. import Modules as IPI
 import xml.etree.ElementTree as xmlio
 import base64
-import pack64
 import array
 import numpy as np
 import json
@@ -456,21 +455,23 @@ def write_xlsx(xlsx_name):
 
         plot_png = pyvuka.get_plot_as_bytestring([i, i+1, i+2], get_bytes=True, black_models=True)
 
-        JSON = {
-                'data_x_1': pack64.pack64(dm.buffer(buffer_set[0]).data.x.get()),
-                'data_y_1': pack64.pack64(dm.buffer(buffer_set[0]).data.y.get()),
-                'model_x_1': pack64.pack64(dm.buffer(buffer_set[0]).model.x.get()),
-                'model_y_1': pack64.pack64(dm.buffer(buffer_set[0]).model.y.get()),
-                'data_x_2': pack64.pack64(dm.buffer(buffer_set[1]).data.x.get()),
-                'data_y_2': pack64.pack64(dm.buffer(buffer_set[1]).data.y.get()),
-                'model_x_2': pack64.pack64(dm.buffer(buffer_set[1]).model.x.get()),
-                'model_y_2': pack64.pack64(dm.buffer(buffer_set[1]).model.y.get()),
-                'data_x_3': pack64.pack64(dm.buffer(buffer_set[2]).data.x.get()),
-                'data_y_3': pack64.pack64(dm.buffer(buffer_set[2]).data.y.get()),
-                'model_x_3': pack64.pack64(dm.buffer(buffer_set[2]).model.x.get()),
-                'model_y_3': pack64.pack64(dm.buffer(buffer_set[2]).model.y.get()),
-                'plot_x_lines': str(dm.buffer(buffer_set[0]).plot.axis.x.lines.get())
-            }
+        # JSON = {
+        #         'data_x_1': pack64.pack64(dm.buffer(buffer_set[0]).data.x.get()),
+        #         'data_y_1': pack64.pack64(dm.buffer(buffer_set[0]).data.y.get()),
+        #         'model_x_1': pack64.pack64(dm.buffer(buffer_set[0]).model.x.get()),
+        #         'model_y_1': pack64.pack64(dm.buffer(buffer_set[0]).model.y.get()),
+        #         'data_x_2': pack64.pack64(dm.buffer(buffer_set[1]).data.x.get()),
+        #         'data_y_2': pack64.pack64(dm.buffer(buffer_set[1]).data.y.get()),
+        #         'model_x_2': pack64.pack64(dm.buffer(buffer_set[1]).model.x.get()),
+        #         'model_y_2': pack64.pack64(dm.buffer(buffer_set[1]).model.y.get()),
+        #         'data_x_3': pack64.pack64(dm.buffer(buffer_set[2]).data.x.get()),
+        #         'data_y_3': pack64.pack64(dm.buffer(buffer_set[2]).data.y.get()),
+        #         'model_x_3': pack64.pack64(dm.buffer(buffer_set[2]).model.x.get()),
+        #         'model_y_3': pack64.pack64(dm.buffer(buffer_set[2]).model.y.get()),
+        #         'plot_x_lines': str(dm.buffer(buffer_set[0]).plot.axis.x.lines.get())
+        #     }
+
+        JSON = {}
 
         out_line[-2] = plot_png
         out_line[-1] = JSON

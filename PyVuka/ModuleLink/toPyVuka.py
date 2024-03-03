@@ -23,6 +23,15 @@ try:
     from .. import commands, plot, data_obj
 except:
     import commands, plot, data_obj
+import matplotlib
+try:
+    matplotlib.use('QT5Agg')  # Required for gui plotting
+except Exception as e:
+    try:
+        matplotlib.use('PyQT5')  # Required for gui plotting
+    except Exception as e:
+        raise RuntimeError("PyQT5 required for gui plotting: pip install pyqt5>=5.15.2")
+    
 from PIL import Image
 from io import BytesIO as BIO
 import os
