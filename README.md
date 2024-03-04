@@ -6,7 +6,11 @@ This project has been supported by the Institute of Protein Innovation, Boston A
 
 ## Installation
 
+```python
 pip install PyVuka
+# for gui mode you must also install pyqt5
+pip install pyqt5
+```
 
 ## Example as PyVuka as a python Library
 
