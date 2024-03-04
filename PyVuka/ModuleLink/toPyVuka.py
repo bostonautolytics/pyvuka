@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # title           :toPyVuka.py
-# author          :R. Paul Nobrega, IPI
-# contact         :Paul.Nobrega@ProteinInnovation.com
+# author          :R. Paul Nobrega
+# contact         :Paul@PaulNobrega.net
 # description     :This file contains code that interfaces code within PyVuka modules to the global PyVuka classes:
 #                     -gvars [global variables]
 #                     -plot  [plotting class]
@@ -9,7 +9,7 @@
 #                 These adapter functions permit facile invocation of native PyVuka plotting functions and direct
 #                 manipulation of the existing buffers and datamatrix
 # usage           :Pyvuka module
-# python_version  :3.7
+# python_version  :3.10
 # ==============================================================================
 #
 # !ATTENTION!
@@ -19,10 +19,10 @@
 # The PyVuka data buffer matrix is a list of object_buffer dictionaries
 #
 #######################################################################################################################
-try:
-    from .. import commands, plot, data_obj
-except:
-    import commands, plot, data_obj
+# try:
+from .. import commands, plot, data_obj
+# except:
+#     import commands, plot, data_obj # to run directly
 import matplotlib
 try:
     matplotlib.use('QT5Agg')  # Required for gui plotting

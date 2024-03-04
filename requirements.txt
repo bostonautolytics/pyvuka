@@ -1,9 +1,9 @@
-asteval==0.9.31
+asteval==0.9.32
 chardet==5.2.0
 contourpy==1.2.0
 cycler==0.12.1
 fonttools==4.49.0
-future==0.18.3
+future==1.0.0
 kiwisolver==1.4.5
 lmfit==1.2.2
 matplotlib==3.8.3
@@ -12,9 +12,9 @@ packaging==23.2
 pillow==10.2.0
 psutil==5.9.8
 pyparsing==3.1.1
-python-dateutil==2.8.2
+python-dateutil==2.9.0.post0
 scipy==1.12.0
 six==1.16.0
 uncertainties==3.1.7
 xlrd==2.0.1
-XlsxWriter==3.1.9
+XlsxWriter==3.2.0

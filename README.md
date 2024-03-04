@@ -5,7 +5,10 @@ PyVuka is a command line based and scriptable data fitting program.  This softwa
 This project has been supported by the Institute of Protein Innovation, Boston AutoLytics, Adimab, Microgradient Fluidics, UMass Medical School, and the University of Pennsylvania
 
 ## Installation
+<<<<<<< HEAD
 
+=======
+>>>>>>> bfb4fb4 (changed python version to 3.10)
 ```python
 pip install PyVuka
 # for gui mode you must also install pyqt5

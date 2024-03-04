@@ -4,7 +4,7 @@
 #                 through a python import with clear syntax
 #usage           :import PyVuka.app as app
 #                 app.start()
-#python_version  :3.7
+#python_version  :3.10
 #==============================================================================
 from . import pyvuka
 
