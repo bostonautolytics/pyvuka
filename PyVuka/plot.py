@@ -1,11 +1,5 @@
 import matplotlib
-try:
-    matplotlib.use('QT5Agg')  # Required for gui plotting
-except Exception as e:
-    try:
-        matplotlib.use('PyQT5')  # Required for gui plotting
-    except Exception as e:
-        matplotlib.use('Agg')  # Permits running headless
+matplotlib.use('Agg')  # Permits running headless by default
 import matplotlib.pyplot as pl
 from matplotlib.ticker import MaxNLocator
 import matplotlib.patheffects as pe
@@ -543,25 +537,28 @@ class plotter(object):
         if init_backend.lower() not in ['agg', 'qt5agg']:
             raise ValueError(f'Current MatplotLib backend is not supported: {init_backend}')
 
-        if not return_bytes and init_backend != 'qt5agg':
+        if not return_bytes and init_backend.lower() == 'agg':
             try:
                 # not returning bytes try to enforce gui if backend is available.  Turn interactive mode on
                 matplotlib.use('qt5agg')
                 pl.ion()
             except Exception as e:
-                print('Using non-GUI backend: ' + str(e))
+                print(str(e))
                 matplotlib.use('agg')
                 pl.ioff()
-        elif return_bytes and init_backend != 'agg':
+        elif return_bytes and init_backend.lower() != 'agg':
             try:
                 # returning bytes try to enforce NO gui if backend is available.  Turn interactive mode off
                 matplotlib.use('agg')
                 pl.ioff()
             except Exception as e:
-                print('Using GUI backend: ' + str(e))
                 matplotlib.use('qt5agg')
                 pl.ion()
 
         pl.close('all')
-        print(f"Using MatPlotLib backend: {str(matplotlib.rcParams['backend'])}")
+        set_backend = str(matplotlib.rcParams['backend'])
+        print(f"Using MatPlotLib backend: {set_backend}\n")
+        if set_backend.lower() == 'agg':
+            print('\033[91m' + "\n\tFor GUI mode: 'pip install pyQT5>=5.15.10' and restart PyVuka\n" + '\033[0m')
+
         return

@@ -10,8 +10,6 @@ import sys
 import os
 try:
     from .ModuleLink import toPyVuka as pyvuka
-except RuntimeError:
-    raise
 except:
     from ModuleLink import toPyVuka as pyvuka  # to run directly
 
@@ -21,7 +19,7 @@ __description__ = "A General Purpose Global Data Analysis Package"
 __copyright__ = "Copyright 2024, www.BostonAutoLytics.com"
 __credits__ = "R. Paul Nobrega, Osman Bilsel, & David G. Lambright"
 __license__ = "GPL"
-__version__ = "0.1.1.1"
+__version__ = "0.1.1.2"
 __maintainer__ = "R. Paul Nobrega"
 __email__ = "Paul@BostonAutoLytics.com"
 __status__ = "Development"
