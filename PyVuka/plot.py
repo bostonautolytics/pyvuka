@@ -543,17 +543,8 @@ class plotter(object):
                 matplotlib.use('qt5agg')
                 pl.ion()
             except Exception as e:
-                print(str(e))
                 matplotlib.use('agg')
                 pl.ioff()
-        elif return_bytes and init_backend.lower() != 'agg':
-            try:
-                # returning bytes try to enforce NO gui if backend is available.  Turn interactive mode off
-                matplotlib.use('agg')
-                pl.ioff()
-            except Exception as e:
-                matplotlib.use('qt5agg')
-                pl.ion()
 
         pl.close('all')
         set_backend = str(matplotlib.rcParams['backend'])
